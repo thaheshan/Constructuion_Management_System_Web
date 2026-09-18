@@ -15,9 +15,12 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-slate-900 text-white min-h-screen p-4 flex flex-col justify-between">
       <div>
-        <div className="flex items-center gap-2 mb-8 px-2">
-          <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center font-black">CMS</div>
-          <span className="font-bold text-lg tracking-wide">CONSTRUCTION</span>
+        <div className="flex items-center gap-2.5 mb-8 px-2">
+          <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center font-black text-white shadow-sm">QS</div>
+          <div>
+            <span className="font-bold text-base tracking-wide block leading-tight">QUICK STOP</span>
+            <span className="text-[10px] text-primary-300 font-semibold tracking-wider uppercase">Management Portal</span>
+          </div>
         </div>
         <nav className="space-y-1">
           {menuItems.map((item) => (
