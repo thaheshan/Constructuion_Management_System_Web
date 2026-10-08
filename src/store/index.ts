@@ -1,12 +1,15 @@
-import { create } from 'zustand';
-import { createAuthSlice, AuthSlice } from './slices/authSlice';
-import { createProjectSlice, ProjectSlice } from './slices/projectSlice';
-import { createInventorySlice, InventorySlice } from './slices/inventorySlice';
+import { configureStore } from '@reduxjs/toolkit';
+import authReducer from './slices/authSlice';
 
-export type RootStore = AuthSlice & ProjectSlice & InventorySlice;
+export const makeStore = () => {
+  return configureStore({
+    reducer: {
+      auth: authReducer,
+    },
+    devTools: process.env.NODE_ENV !== 'production',
+  });
+};
 
-export const useCMSStore = create<RootStore>()((...a) => ({
-  ...createAuthSlice(...a),
-  ...createProjectSlice(...a),
-  ...createInventorySlice(...a),
-}));
+export type AppStore = ReturnType<typeof makeStore>;
+export type RootState = ReturnType<AppStore['getState']>;
+export type AppDispatch = AppStore['dispatch'];
