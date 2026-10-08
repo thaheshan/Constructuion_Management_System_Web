@@ -7,7 +7,7 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AuthState, User, UserProfile, UserRole } from '../../types/auth';
+import { AuthState, UserProfile, UserRole } from '../../types/auth';
 
 const initialState: AuthState = {
   user: null,
@@ -28,12 +28,12 @@ export const authSlice = createSlice({
     },
     loginSuccess: (
       state,
-      action: PayloadAction<{ user: User | UserProfile; token: string }>
+      action: PayloadAction<{ user: UserProfile; token: string }>
     ) => {
       state.isLoading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
-      state.role = (action.payload.user.role as UserRole) || null;
+      state.role = action.payload.user.role;
       state.token = action.payload.token;
       state.error = null;
     },
@@ -44,11 +44,11 @@ export const authSlice = createSlice({
     },
     setCredentials: (
       state,
-      action: PayloadAction<{ user: User | UserProfile; token: string }>
+      action: PayloadAction<{ user: UserProfile; token: string }>
     ) => {
       state.isAuthenticated = true;
       state.user = action.payload.user;
-      state.role = (action.payload.user.role as UserRole) || null;
+      state.role = action.payload.user.role;
       state.token = action.payload.token;
       state.error = null;
     },
@@ -73,9 +73,12 @@ export const authSlice = createSlice({
     /**
      * @deprecated TEMPORARY_MOCK_AUTH:
      * This action is strictly for local scaffold verification and testing before real API integration.
-     * Do NOT ship to production or connect to real login endpoints.
+     * Guarded: Throws in production unless NEXT_PUBLIC_ENABLE_MOCK_AUTH === 'true'.
      */
-    mockLogin: (state, action: PayloadAction<{ email: string; role?: UserRole; name?: string }>) => {
+    mockLogin: (state, action: PayloadAction<{ email: string; role?: UserRole; fullName?: string }>) => {
+      if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH !== 'true') {
+        throw new Error('mockLogin action is disabled in production environments.');
+      }
       const assignedRole = action.payload.role || 'STAFF';
       state.isLoading = false;
       state.isAuthenticated = true;
@@ -83,7 +86,7 @@ export const authSlice = createSlice({
       state.user = {
         id: 'cms_usr_' + Math.random().toString(36).substring(2, 9),
         email: action.payload.email,
-        name: action.payload.name || action.payload.email.split('@')[0],
+        fullName: action.payload.fullName || action.payload.email.split('@')[0],
         role: assignedRole,
       };
       state.token = 'cms_mock_jwt_token_' + Date.now();

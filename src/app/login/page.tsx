@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { GuestRoute } from '@/components/common/GuestRoute';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { useAppSelector } from '@/store/hooks';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const { error } = useAppSelector((state) => state.auth);
@@ -43,7 +44,9 @@ export default function LoginPage() {
               </div>
             }
           >
-            <LoginForm redirectPath="/" />
+            <Suspense fallback={<div className="flex justify-center p-6"><Loader2 className="w-6 h-6 animate-spin text-primary-600" /></div>}>
+              <LoginForm redirectPath="/" />
+            </Suspense>
           </AuthCard>
         </div>
       </main>

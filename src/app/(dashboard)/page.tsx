@@ -6,7 +6,7 @@ import { useAppSelector } from '@/store/hooks';
 import { CheckCircle2, ShieldCheck, Database, Layers } from 'lucide-react';
 
 export default function OwnerDashboardPage() {
-  const { user, token, isAuthenticated } = useAppSelector((state) => state.auth);
+  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
 
   return (
     <div className="space-y-6">
@@ -16,13 +16,13 @@ export default function OwnerDashboardPage() {
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              CMS Environment Ready
+              CMS Operational Dashboard
             </div>
             <h2 className="text-xl md:text-2xl font-bold">
-              Welcome, {user?.name || user?.fullName || 'Administrator'}
+              Welcome, {user?.fullName || 'Administrator'}
             </h2>
             <p className="text-xs md:text-sm text-slate-300">
-              Logged in as <span className="font-semibold text-white">{user?.email || 'N/A'}</span> ({user?.role || 'STAFF'}). Redux store & protected routing are actively verified.
+              Signed in as <span className="font-semibold text-white">{user?.email || 'N/A'}</span> ({user?.role || 'STAFF'}).
             </p>
           </div>
 
@@ -30,22 +30,22 @@ export default function OwnerDashboardPage() {
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-lg px-3 py-2 flex items-center gap-2">
               <Database className="w-4 h-4 text-primary-300" />
               <div>
-                <span className="text-[10px] text-slate-400 block">Redux Auth</span>
-                <span className="font-semibold">{isAuthenticated ? 'Active' : 'Unauthenticated'}</span>
+                <span className="text-[10px] text-slate-400 block">Redux Store</span>
+                <span className="font-semibold">{isAuthenticated ? 'Connected' : 'Idle'}</span>
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-lg px-3 py-2 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-300" />
               <div>
-                <span className="text-[10px] text-slate-400 block">Protected Route</span>
-                <span className="font-semibold">Secured</span>
+                <span className="text-[10px] text-slate-400 block">Route Access</span>
+                <span className="font-semibold">{isAuthenticated ? 'Granted' : 'Restricted'}</span>
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-lg px-3 py-2 flex items-center gap-2">
               <Layers className="w-4 h-4 text-blue-300" />
               <div>
-                <span className="text-[10px] text-slate-400 block">Architecture</span>
-                <span className="font-semibold">Component-based</span>
+                <span className="text-[10px] text-slate-400 block">RBAC Role</span>
+                <span className="font-semibold">{user?.role || 'STAFF'}</span>
               </div>
             </div>
           </div>
@@ -72,25 +72,25 @@ export default function OwnerDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Redux Store Session Details">
+        <Card title="Current Session Profile">
           <div className="space-y-3 text-xs">
             <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Authentication State:</span>
-              <span className="font-semibold text-emerald-600">Authenticated (true)</span>
+              <span className="text-slate-500 font-medium">Full Name:</span>
+              <span className="font-semibold text-slate-800">{user?.fullName || 'N/A'}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">User ID:</span>
-              <span className="font-mono text-slate-700">{user?.id || 'N/A'}</span>
+              <span className="text-slate-500 font-medium">Work Email:</span>
+              <span className="font-semibold text-slate-800">{user?.email || 'N/A'}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Session Token:</span>
-              <span className="font-mono text-slate-700 truncate max-w-[200px]">
-                {token || 'N/A'}
-              </span>
+              <span className="text-slate-500 font-medium">Assigned Role:</span>
+              <span className="font-semibold text-primary-600">{user?.role || 'STAFF'}</span>
             </div>
             <div className="flex justify-between py-2">
-              <span className="text-slate-500 font-medium">API Integration Status:</span>
-              <span className="font-semibold text-primary-600">Ready for Backend Endpoints</span>
+              <span className="text-slate-500 font-medium">Session Status:</span>
+              <span className={`font-semibold ${isAuthenticated ? 'text-emerald-600' : 'text-slate-500'}`}>
+                {isAuthenticated ? 'Authenticated' : 'Unauthenticated'}
+              </span>
             </div>
           </div>
         </Card>

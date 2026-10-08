@@ -5,32 +5,21 @@ export type UserRole =
   | 'LABOUR_OFFICER' 
   | 'ACCOUNTANT' 
   | 'STORE_KEEPER' 
-  | 'STAFF'
-  | 'ADMIN'
-  | 'CUSTOMER';
+  | 'STAFF';
 
 export interface UserProfile {
   id: string;
   email: string;
   fullName: string;
-  name?: string;
   role: UserRole;
-  phone: string;
-  nic: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  fullName?: string;
-  role: UserRole;
+  phone?: string;
+  nic?: string;
   avatar?: string;
   createdAt?: string;
 }
 
 export interface AuthState {
-  user: User | UserProfile | null;
+  user: UserProfile | null;
   role: UserRole | null;
   token: string | null;
   isAuthenticated: boolean;
@@ -45,9 +34,8 @@ export interface LoginCredentials {
 }
 
 export interface RegisterCredentials {
-  name: string;
+  fullName: string;
   email: string;
   password: string;
   confirmPassword?: string;
 }
-

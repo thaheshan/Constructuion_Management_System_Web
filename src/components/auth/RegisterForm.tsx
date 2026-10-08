@@ -69,7 +69,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ redirectPath = '/' }
         loginSuccess({
           user: {
             id: 'cms_usr_' + Math.random().toString(36).substring(2, 7),
-            name,
+            fullName: name,
             email,
             role: 'STAFF',
           },

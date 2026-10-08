@@ -29,11 +29,11 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-primary-100 border border-primary-200 flex items-center justify-center text-primary-700 font-bold text-sm">
-            {(user?.name || user?.fullName) ? (user.name || user.fullName)!.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
+            {user?.fullName ? user.fullName.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
           </div>
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-slate-900 leading-tight">
-              {user?.name || user?.fullName || 'Authenticated User'}
+              {user?.fullName || 'Authenticated User'}
             </p>
             <p className="text-xs text-slate-500 capitalize">
               {user?.role ? String(user.role).toLowerCase() : 'Staff Member'}

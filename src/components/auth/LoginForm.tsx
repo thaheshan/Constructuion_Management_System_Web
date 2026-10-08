@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { loginStart, loginSuccess, loginFailure, clearError } from '@/store/slices/authSlice';
@@ -20,8 +20,9 @@ interface LoginFormProps {
   redirectPath?: string;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ redirectPath = '/' }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ redirectPath: defaultRedirect = '/' }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { isLoading, error } = useAppSelector((state) => state.auth);
 
@@ -30,6 +31,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ redirectPath = '/' }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [clientErrors, setClientErrors] = useState<{ email?: string; password?: string }>({});
+
+  const isMockAuthAllowed =
+    process.env.NODE_ENV !== 'production' ||
+    process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH === 'true';
 
   const validate = () => {
     const errors: { email?: string; password?: string } = {};
@@ -55,47 +60,70 @@ export const LoginForm: React.FC<LoginFormProps> = ({ redirectPath = '/' }) => {
 
     dispatch(loginStart());
 
+    // Resolve target path: prioritize query parameter ?redirect= over default
+    const targetRedirect = searchParams.get('redirect') || defaultRedirect;
+
     try {
+      if (!isMockAuthAllowed) {
+        // In real production bundle without mock flag, reject simulated auth
+        dispatch(
+          loginFailure(
+            'Production API endpoint is required. Simulated authentication is disabled.'
+          )
+        );
+        return;
+      }
+
       // Simulated auth network latency for realistic UX
       await new Promise((resolve) => setTimeout(resolve, 600));
 
-      // TEMPORARY_MOCK_AUTH: Replace with real API call in next sprint
-      if (email.toLowerCase().includes('fail') || password === 'wrongpassword') {
+      if (email.toLowerCase().startsWith('fail') || password === 'wrongpassword') {
         dispatch(loginFailure('Invalid credentials. Please check your email and password.'));
         return;
       }
 
-      const assignedRole: UserRole = email.includes('pm')
-        ? 'PROJECT_MANAGER'
-        : email.includes('supervisor')
-        ? 'SITE_SUPERVISOR'
-        : email.includes('accountant')
-        ? 'ACCOUNTANT'
-        : email.includes('store')
-        ? 'STORE_KEEPER'
-        : email.includes('admin')
-        ? 'ADMIN'
-        : 'OWNER';
+      // Strict role resolution - Principle of Least Privilege: default to STAFF (lowest role)
+      const username = email.split('@')[0].toLowerCase();
+      let assignedRole: UserRole = 'STAFF';
+
+      if (username === 'owner' || username.startsWith('owner.')) {
+        assignedRole = 'OWNER';
+      } else if (username === 'pm' || username.startsWith('pm.')) {
+        assignedRole = 'PROJECT_MANAGER';
+      } else if (username === 'supervisor' || username.startsWith('supervisor.')) {
+        assignedRole = 'SITE_SUPERVISOR';
+      } else if (username === 'accountant' || username.startsWith('accountant.')) {
+        assignedRole = 'ACCOUNTANT';
+      } else if (username === 'store' || username.startsWith('store.')) {
+        assignedRole = 'STORE_KEEPER';
+      } else if (username === 'labour' || username.startsWith('labour.')) {
+        assignedRole = 'LABOUR_OFFICER';
+      }
+
+      const formattedName = username
+        .replace('.', ' ')
+        .split(' ')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
 
       dispatch(
         loginSuccess({
           user: {
             id: 'cms_usr_101',
             email,
-            name: email.split('@')[0].replace('.', ' ').replace(/^\w/, (c) => c.toUpperCase()),
+            fullName: formattedName,
             role: assignedRole,
           },
           token: 'cms_jwt_mock_token_' + Date.now(),
         })
       );
 
-      router.push(redirectPath);
+      router.push(targetRedirect);
     } catch {
       dispatch(loginFailure('An unexpected error occurred during login. Please try again.'));
     }
   };
 
-  // Temporary scaffold helper to test different RBAC profiles
   const handleFillDemo = (role: 'owner' | 'pm' | 'supervisor') => {
     dispatch(clearError());
     setClientErrors({});
@@ -192,33 +220,35 @@ export const LoginForm: React.FC<LoginFormProps> = ({ redirectPath = '/' }) => {
         )}
       </Button>
 
-      {/* Temporary Demo RBAC Credentials Helper */}
-      <div className="pt-3 border-t border-slate-100 text-center">
-        <p className="text-[11px] text-slate-400 mb-2">Temporary Scaffold Test (Demo RBAC Credentials):</p>
-        <div className="flex justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => handleFillDemo('owner')}
-            className="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition font-medium"
-          >
-            Owner
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFillDemo('pm')}
-            className="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition font-medium"
-          >
-            PM
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFillDemo('supervisor')}
-            className="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition font-medium"
-          >
-            Supervisor
-          </button>
+      {/* Temporary Demo RBAC Credentials Helper - Only displayed when mock auth is allowed */}
+      {isMockAuthAllowed && (
+        <div className="pt-3 border-t border-slate-100 text-center">
+          <p className="text-[11px] text-slate-400 mb-2">Temporary Scaffold Test (Demo RBAC Credentials):</p>
+          <div className="flex justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleFillDemo('owner')}
+              className="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition font-medium"
+            >
+              Owner
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFillDemo('pm')}
+              className="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition font-medium"
+            >
+              PM
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFillDemo('supervisor')}
+              className="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition font-medium"
+            >
+              Supervisor
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </form>
   );
 };
