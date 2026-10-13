@@ -12,6 +12,30 @@ export interface UserProfile {
   email: string;
   fullName: string;
   role: UserRole;
-  phone: string;
-  nic: string;
+  phone?: string;
+  nic?: string;
+  avatar?: string;
+  createdAt?: string;
+}
+
+export interface AuthState {
+  user: UserProfile | null;
+  role: UserRole | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+}
+
+export interface RegisterCredentials {
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword?: string;
 }
