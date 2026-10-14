@@ -15,8 +15,8 @@ interface SplashScreenProps {
   children: ReactNode;
 }
 
-const FIRST_SCREEN_DURATION = 5000;
-const SECOND_SCREEN_DURATION = 5000;
+const FIRST_SCREEN_DURATION = 2000;
+const SECOND_SCREEN_DURATION = 2000;
 
 const SplashScreen = ({ children }: SplashScreenProps) => {
   const router = useRouter();
