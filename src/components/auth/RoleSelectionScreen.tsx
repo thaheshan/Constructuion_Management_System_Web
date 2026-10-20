@@ -146,8 +146,10 @@ export const RoleSelectionScreen: React.FC = () => {
 
   const handleContinue = () => {
     if (!canContinue) return;
-    // In a real app: store role in registration state and navigate
-    router.push('/register/verify');
+    const params = new URLSearchParams();
+    if (selectedRole) params.set('role', selectedRole);
+    if (selectedSubRole) params.set('subRole', selectedSubRole);
+    router.push(`/register/create-account?${params.toString()}`);
   };
 
   return (
