@@ -388,10 +388,10 @@ export const SignInForm: React.FC<SignInFormProps> = ({
         <p className="text-xs text-slate-500">
           Need an account?{" "}
           <a
-            href="/register"
+            href="/register/role-selection"
             className="font-bold text-slate-900 hover:text-futura-600 hover:underline transition"
           >
-            Signup
+            Create account
           </a>
         </p>
 
