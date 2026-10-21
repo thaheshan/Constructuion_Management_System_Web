@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import Image from 'next/image';
-import { UploadCloud, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { X, Image as ImageIcon, AlertCircle } from 'lucide-react';
 
 interface LogoUploadZoneProps {
   logoBase64?: string;
@@ -110,7 +110,7 @@ export const LogoUploadZone: React.FC<LogoUploadZoneProps> = ({
             type="button"
             onClick={onFileRemove}
             disabled={disabled}
-            className="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-white transition"
+            className="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-white transition cursor-pointer"
             title="Remove logo"
           >
             <X className="w-4 h-4" />
@@ -122,22 +122,29 @@ export const LogoUploadZone: React.FC<LogoUploadZoneProps> = ({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onClick={() => !disabled && fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center transition cursor-pointer flex flex-col items-center justify-center ${
+          className={`border-2 border-dashed rounded-xl p-4 sm:p-5 transition cursor-pointer flex items-center gap-4 ${
             isDragging
               ? 'border-futura-500 bg-futura-50/50'
-              : 'border-slate-300 hover:border-slate-400 bg-slate-50/40'
+              : 'border-slate-300 hover:border-slate-400 bg-white'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          <div className="w-12 h-12 rounded-full bg-futura-50 border border-futura-100 flex items-center justify-center text-futura-600 mb-3">
-            <UploadCloud className="w-6 h-6" />
+          <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-400 flex-shrink-0">
+            <ImageIcon className="w-6 h-6" />
           </div>
-          <p className="text-sm font-semibold text-slate-800 mb-1">
-            Drag and drop or{' '}
-            <span className="text-futura-600 hover:underline">Browse file</span>
-          </p>
-          <p className="text-xs text-slate-500">
-            PNG, JPG, or SVG up to 2MB. Recommended: 500x500px square.
-          </p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-slate-800">
+              Upload your logo
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              PNG, JPG or SVG. Max 2MB. 500×500px recommended.
+            </p>
+            <button
+              type="button"
+              className="text-xs font-semibold text-blue-600 hover:underline mt-1 inline-block cursor-pointer focus:outline-none"
+            >
+              Choose File
+            </button>
+          </div>
         </div>
       )}
 

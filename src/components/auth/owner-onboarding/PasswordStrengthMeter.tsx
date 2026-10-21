@@ -95,24 +95,21 @@ export const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
         })}
       </div>
 
-      {/* Label */}
+      {/* Label: left-aligned single line matching reference image */}
       {password && (
-        <div className="flex items-center justify-between text-[11px] font-bold tracking-wider">
-          <span className="text-slate-500">PASSWORD STRENGTH:</span>
-          <span
-            className={
-              label === 'WEAK'
-                ? 'text-red-600'
-                : label === 'FAIR'
-                ? 'text-amber-600'
-                : label === 'GOOD'
-                ? 'text-blue-600'
-                : 'text-emerald-600'
-            }
-          >
-            {label}
-          </span>
-        </div>
+        <p
+          className={`text-[11px] font-bold tracking-wider uppercase ${
+            label === 'WEAK'
+              ? 'text-red-600'
+              : label === 'FAIR'
+              ? 'text-amber-600'
+              : label === 'GOOD'
+              ? 'text-blue-600'
+              : 'text-emerald-600'
+          }`}
+        >
+          PASSWORD STRENGTH: {label}
+        </p>
       )}
     </div>
   );

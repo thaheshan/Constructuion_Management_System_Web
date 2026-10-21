@@ -23,16 +23,16 @@ export const OnboardingProgressBar: React.FC<OnboardingProgressBarProps> = ({
   const stepTitle = STEP_TITLES[currentStep] || 'ONBOARDING';
 
   return (
-    <div className="w-full mb-8">
-      <div className="flex items-center justify-between text-xs sm:text-sm font-bold mb-2.5">
+    <div className="w-full mb-6 select-none">
+      <div className="flex items-center justify-between text-xs sm:text-[13px] font-bold mb-2">
         <span className="text-slate-800 tracking-wider uppercase">
           STEP {currentStep} OF {totalSteps}: {stepTitle}
         </span>
-        <span className="text-slate-500 font-semibold">{percentage}% Complete</span>
+        <span className="text-slate-400 font-semibold">{percentage}% Complete</span>
       </div>
-      <div className="w-full h-2 sm:h-2.5 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+      <div className="w-full h-1.5 sm:h-2 bg-slate-200/90 rounded-full overflow-hidden shadow-inner">
         <div
-          className="h-full bg-futura-500 rounded-full transition-all duration-500 ease-out"
+          className="h-full bg-futura-500 rounded-full transition-all duration-300 ease-out"
           style={{ width: `${percentage}%` }}
           role="progressbar"
           aria-valuenow={percentage}

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import React, { Suspense, useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setStep,
@@ -15,34 +15,52 @@ import { OwnerStep3VerifyOtp } from '@/components/auth/owner-onboarding/OwnerSte
 import { Sparkles, ArrowLeft, RefreshCw, X } from 'lucide-react';
 
 function OwnerOnboardingWizardContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const currentStep = useAppSelector((state) => state.ownerOnboarding.currentStep);
 
   const [draftBannerVisible, setDraftBannerVisible] = useState(false);
   const [savedDraftData, setSavedDraftData] = useState<any>(null);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
-  // Synchronize step with searchParams if present
+  // Initialize step from URL on initial mount only
+  const isInitialMount = useRef(true);
   useEffect(() => {
-    const stepParam = searchParams.get('step');
-    if (stepParam) {
-      const parsed = parseInt(stepParam, 10);
-      if (parsed >= 1 && parsed <= 5 && parsed !== currentStep) {
-        dispatch(setStep(parsed));
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      const stepParam = searchParams.get('step');
+      if (stepParam) {
+        const parsed = parseInt(stepParam, 10);
+        if (parsed >= 1 && parsed <= 5 && parsed !== currentStep) {
+          dispatch(setStep(parsed));
+        }
       }
     }
   }, [searchParams, dispatch, currentStep]);
 
-  // Sync back to URL when Redux step changes
+  // Handle browser back and forward button events smoothly
   useEffect(() => {
-    const currentParam = searchParams.get('step');
-    if (String(currentStep) !== currentParam) {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('step', String(currentStep));
-      router.replace(`/register/owner?${params.toString()}`);
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const step = parseInt(params.get('step') || '1', 10);
+      if (step >= 1 && step <= 5) {
+        dispatch(setStep(step));
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [dispatch]);
+
+  // Keep browser URL cleanly in sync with currentStep without triggering App Router remount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('step') !== String(currentStep)) {
+        url.searchParams.set('step', String(currentStep));
+        window.history.replaceState(null, '', url.toString());
+      }
     }
-  }, [currentStep, router, searchParams]);
+  }, [currentStep]);
 
   // Check for saved draft on initial mount
   useEffect(() => {
@@ -74,31 +92,29 @@ function OwnerOnboardingWizardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
       {/* Top Navbar */}
-      <OwnerOnboardingHeader />
+      <OwnerOnboardingHeader
+        isHelpOpen={isHelpOpen}
+        onOpenHelp={() => setIsHelpOpen(true)}
+        onCloseHelp={() => setIsHelpOpen(false)}
+      />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <main className="flex-1 w-full mx-auto px-4 py-8 sm:py-10 max-w-2xl transition-all duration-150">
         {/* Saved Draft Detected Banner */}
         {draftBannerVisible && (
-          <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-sm flex items-center justify-between gap-4 animate-fadeIn">
+          <div className="mb-5 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-sm flex items-center justify-between gap-4 animate-fadeIn">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
-                <RefreshCw className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
+                <RefreshCw className="w-4 h-4" />
               </div>
               <div>
                 <p className="text-xs font-bold text-amber-950 uppercase tracking-wide">
                   Saved Draft Found
                 </p>
                 <p className="text-xs text-amber-800">
-                  You have an unfinished onboarding session from{' '}
-                  <span className="font-semibold">
-                    {savedDraftData?.lastSavedAt
-                      ? new Date(savedDraftData.lastSavedAt).toLocaleDateString()
-                      : 'earlier'}
-                  </span>
-                  . Would you like to resume?
+                  You have an unfinished onboarding session. Would you like to resume?
                 </p>
               </div>
             </div>
@@ -106,14 +122,14 @@ function OwnerOnboardingWizardContent() {
               <button
                 type="button"
                 onClick={handleApplyDraft}
-                className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-sm cursor-pointer"
+                className="px-3 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-sm cursor-pointer"
               >
                 Restore
               </button>
               <button
                 type="button"
                 onClick={handleDismissDraft}
-                className="p-1.5 rounded-lg text-amber-700 hover:text-amber-900 transition cursor-pointer"
+                className="p-1 rounded-lg text-amber-700 hover:text-amber-900 transition cursor-pointer"
                 aria-label="Dismiss banner"
               >
                 <X className="w-4 h-4" />
@@ -126,27 +142,40 @@ function OwnerOnboardingWizardContent() {
         <OnboardingProgressBar currentStep={currentStep} totalSteps={5} />
 
         {/* Step Views */}
-        {currentStep === 1 && <OwnerStep1YourDetails />}
-        {currentStep === 2 && <OwnerStep2CompanyDetails />}
-        {currentStep === 3 && <OwnerStep3VerifyOtp />}
+        {currentStep === 1 && (
+          <OwnerStep1YourDetails onOpenHelp={() => setIsHelpOpen(true)} />
+        )}
+        {currentStep === 2 && (
+          <OwnerStep2CompanyDetails onOpenHelp={() => setIsHelpOpen(true)} />
+        )}
+        {currentStep === 3 && (
+          <OwnerStep3VerifyOtp onOpenHelp={() => setIsHelpOpen(true)} />
+        )}
 
         {/* Step 4 & 5 Placeholders for subsequent stories */}
         {currentStep > 3 && (
-          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-200 p-8 sm:p-12 text-center space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-futura-50 border border-futura-100 flex items-center justify-center text-futura-600 mx-auto shadow-sm">
-              <Sparkles className="w-8 h-8" />
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-futura-50 border border-futura-100 flex items-center justify-center text-futura-600 mx-auto shadow-sm">
+              <Sparkles className="w-7 h-7" />
             </div>
-            <h2 className="text-2xl font-extrabold text-slate-900">
+            <h2 className="text-xl font-bold text-slate-900">
               {currentStep === 4 ? 'Review & Plan Selection' : 'Setup Complete'}
             </h2>
-            <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-              Step 1 (Personal Details), Step 2 (Company Details), and Step 3 (Identity Verification) have been completed successfully. Subsequent onboarding phases (FE-09 / FE-10) will continue from here.
+            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+              Step 1 (Personal Details), Step 2 (Company Details), and Step 3 (Identity Verification) have been completed successfully. Subsequent onboarding phases will continue from here.
             </p>
-            <div className="pt-4 flex justify-center gap-3">
+            <div className="pt-3 flex justify-center gap-3">
               <button
                 type="button"
-                onClick={() => dispatch(setStep(3))}
-                className="py-2.5 px-5 rounded-xl border border-slate-300 hover:border-slate-400 text-slate-700 text-xs font-bold transition flex items-center gap-2"
+                onClick={() => {
+                  dispatch(setStep(3));
+                  if (typeof window !== 'undefined') {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('step', '3');
+                    window.history.pushState({}, '', url.toString());
+                  }
+                }}
+                className="py-2 px-4 rounded-xl border border-slate-300 hover:border-slate-400 text-slate-700 text-xs font-bold transition flex items-center gap-2 cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Return to Step 3 (Verify)</span>
@@ -155,13 +184,6 @@ function OwnerOnboardingWizardContent() {
           </div>
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="py-6 text-center text-xs text-slate-400 border-t border-slate-200/60 bg-white">
-        <p>
-          &copy; {new Date().getFullYear()} Futura Constructions (Pvt) Ltd. All rights reserved.
-        </p>
-      </footer>
     </div>
   );
 }
@@ -170,7 +192,7 @@ export default function OwnerOnboardingWizardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center">
+        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-futura-500" />
         </div>
       }

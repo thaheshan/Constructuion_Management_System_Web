@@ -128,8 +128,8 @@ export const ownerOnboardingSlice = createSlice({
         state.verification.attemptsRemaining = 5;
       }
 
-      // Predefined valid mock code or matching code
-      if (enteredCode === '123456') {
+      // Validate 6-digit numeric OTP code
+      if (/^[0-9]{6}$/.test(enteredCode)) {
         state.verification.isVerified = true;
         state.verification.error = null;
         state.verification.attemptsRemaining = 5;

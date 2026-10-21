@@ -104,7 +104,7 @@ export interface OwnerDetails {
 
 export interface CompanyDetails {
   companyName: string;
-  businessType: BusinessType | '';
+  businessType: string;
   businessRegNo?: string;
   companyPhonePrefix: string;
   companyPhone: string;
