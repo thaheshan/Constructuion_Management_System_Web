@@ -27,9 +27,9 @@ interface SignInFormProps {
   onSwitchToSmsOtp: (prefilledIdentifier?: string) => void;
   onSwitchToKiosk: () => void;
   onForgotPassword: (identifier?: string) => void;
-  onOpenHelp: () => void;
-  onOpenPrivacy: () => void;
-  onOpenLegal: () => void;
+  onOpenHelp?: () => void;
+  onOpenPrivacy?: () => void;
+  onOpenLegal?: () => void;
 }
 
 export const SignInForm: React.FC<SignInFormProps> = ({
@@ -37,9 +37,6 @@ export const SignInForm: React.FC<SignInFormProps> = ({
   onSwitchToSmsOtp,
   onSwitchToKiosk,
   onForgotPassword,
-  onOpenHelp,
-  onOpenPrivacy,
-  onOpenLegal,
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -200,7 +197,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
     <div className="w-full">
       {/* Title & Subtitle */}
       <div className="mb-6">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
           Welcome back
         </h2>
         <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
@@ -270,13 +267,6 @@ export const SignInForm: React.FC<SignInFormProps> = ({
             >
               PASSWORD
             </label>
-            <button
-              type="button"
-              onClick={() => onForgotPassword(identifier)}
-              className="text-xs font-bold text-futura-500 hover:text-futura-600 hover:underline transition"
-            >
-              Forgot password?
-            </button>
           </div>
           <div className="relative rounded-xl shadow-sm">
             <input
@@ -301,13 +291,13 @@ export const SignInForm: React.FC<SignInFormProps> = ({
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none transition"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition focus:outline-none"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
-                <EyeOff className="w-4 h-4" />
+                <EyeOff className="w-4 h-4 " />
               ) : (
-                <Eye className="w-4 h-4" />
+                <Eye className="w-4 h-4 " />
               )}
             </button>
           </div>
@@ -318,7 +308,15 @@ export const SignInForm: React.FC<SignInFormProps> = ({
             </p>
           )}
         </div>
-
+        <div className="grid justify-items-end">
+          <button
+            type="button"
+            onClick={() => onForgotPassword(identifier)}
+            className="text-xs font-bold text-futura-500 hover:text-futura-600 hover:underline transition"
+          >
+            Forgot password?
+          </button>
+        </div>
         {/* Remember me Checkbox */}
         <div className="flex items-center pt-0.5">
           <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium text-slate-600 hover:text-slate-900 select-none">
@@ -381,47 +379,20 @@ export const SignInForm: React.FC<SignInFormProps> = ({
             <span>Switch to Kiosk Terminal Mode</span>
           </button>
         </div>
-      </form>
 
-      {/* Footer Below Card Content */}
-      <div className="mt-8 text-center space-y-3">
-        <p className="text-xs text-slate-500">
-          Need an account?{" "}
-          <a
-            href="/register/role-selection"
-            className="font-bold text-slate-900 hover:text-futura-600 hover:underline transition"
-          >
-            Create account
-          </a>
-        </p>
-
-        {/* Legal & Help Center Links */}
-        <div className="flex items-center justify-center gap-2 text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-slate-400 pt-1">
-          <button
-            type="button"
-            onClick={onOpenHelp}
-            className="hover:text-slate-600 transition"
-          >
-            HELP CENTER
-          </button>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={onOpenPrivacy}
-            className="hover:text-slate-600 transition"
-          >
-            PRIVACY POLICY
-          </button>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={onOpenLegal}
-            className="hover:text-slate-600 transition"
-          >
-            LEGAL
-          </button>
+        {/* Mobile only: Need an account link positioned directly below form actions */}
+        <div className="lg:hidden mt-6 text-center">
+          <p className="text-xs text-slate-500">
+            Need an account?{" "}
+            <a
+              href="/register"
+              className="font-bold text-slate-900 hover:text-futura-600 hover:underline transition"
+            >
+              Signup
+            </a>
+          </p>
         </div>
-      </div>
+      </form>
     </div>
   );
 };
