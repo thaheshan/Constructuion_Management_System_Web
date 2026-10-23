@@ -47,13 +47,14 @@ export const authSlice = createSlice({
     },
     setCredentials: (
       state,
-      action: PayloadAction<{ user: UserProfile; token: string | null }>
+      action: PayloadAction<{ user: UserProfile; token?: string | null }>
     ) => {
+      state.isLoading = false;
       state.isAuthenticated = true;
       state.isSessionInitialized = true;
       state.user = action.payload.user;
       state.role = action.payload.user.role;
-      state.token = action.payload.token;
+      state.token = action.payload.token ?? null;
       state.error = null;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -66,6 +67,20 @@ export const authSlice = createSlice({
     sessionCheckComplete: (state) => {
       state.isLoading = false;
       state.isSessionInitialized = true;
+    },
+    sessionCheckFailure: (state, action: PayloadAction<string>) => {
+      state.isLoading = false;
+      state.isSessionInitialized = true;
+      state.isAuthenticated = false;
+      state.error = action.payload;
+    },
+    sessionCheckAbort: (state) => {
+      state.isLoading = false;
+    },
+    resetSessionCheck: (state) => {
+      state.isLoading = false;
+      state.isSessionInitialized = false;
+      state.error = null;
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
@@ -117,6 +132,9 @@ export const {
   setLoading,
   sessionCheckStart,
   sessionCheckComplete,
+  sessionCheckFailure,
+  sessionCheckAbort,
+  resetSessionCheck,
   setError,
   clearError,
   logout,

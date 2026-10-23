@@ -1,39 +1,42 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
-import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  setCredentials,
-  sessionCheckComplete,
-  sessionCheckStart,
-} from "@/store/slices/authSlice";
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { resetSessionCheck } from '@/store/slices/authSlice';
+import { AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
 
 interface SplashScreenProps {
   children: ReactNode;
+  firstScreenDuration?: number;
+  secondScreenDuration?: number;
 }
 
-const FIRST_SCREEN_DURATION = 2000;
-const SECOND_SCREEN_DURATION = 2000;
+const DEFAULT_FIRST_SCREEN_DURATION = 1200;
+const DEFAULT_SECOND_SCREEN_DURATION = 1200;
 
-const SplashScreen = ({ children }: SplashScreenProps) => {
+const SplashScreen = ({
+  children,
+  firstScreenDuration = DEFAULT_FIRST_SCREEN_DURATION,
+  secondScreenDuration = DEFAULT_SECOND_SCREEN_DURATION,
+}: SplashScreenProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useAppDispatch();
 
-  const { isAuthenticated, isLoading, isSessionInitialized } = useAppSelector(
+  const { isAuthenticated, isSessionInitialized, error } = useAppSelector(
     (state) => state.auth
   );
 
-  const [showSplash, setShowSplash] = useState(pathname === "/");
+  const [showSplash, setShowSplash] = useState(pathname === '/');
   const [showBranding, setShowBranding] = useState(false);
   const [minimumDurationElapsed, setMinimumDurationElapsed] = useState(false);
-  const [showLoadingDots, setShowLoadingDots] = useState(true);
 
+  // Manage splash screen timer states based on route
   useEffect(() => {
-    if (pathname !== "/") {
+    if (pathname !== '/') {
       setShowSplash(false);
       setShowBranding(false);
       setMinimumDurationElapsed(false);
@@ -46,105 +49,56 @@ const SplashScreen = ({ children }: SplashScreenProps) => {
 
     const brandingTimer = window.setTimeout(() => {
       setShowBranding(true);
-    }, FIRST_SCREEN_DURATION);
+    }, firstScreenDuration);
 
     const durationTimer = window.setTimeout(() => {
       setMinimumDurationElapsed(true);
-    }, FIRST_SCREEN_DURATION + SECOND_SCREEN_DURATION);
+    }, firstScreenDuration + secondScreenDuration);
 
     return () => {
       window.clearTimeout(brandingTimer);
       window.clearTimeout(durationTimer);
     };
-  }, [pathname]);
+  }, [pathname, firstScreenDuration, secondScreenDuration]);
 
+  // Handle redirect once session is initialized and minimum duration has elapsed
   useEffect(() => {
-    if (pathname !== "/") {
+    // Only redirect from the "/" root path once session is initialized and timer has elapsed
+    // If there is an outage / network error, do not silently redirect to /login
+    if (pathname !== '/' || !isSessionInitialized || !minimumDurationElapsed || error) {
       return;
     }
 
-    const dotsTimer = window.setInterval(() => {
-      setShowLoadingDots((visible) => !visible);
-    }, 1400);
+    // NOTE: setShowSplash(false) is intentionally NOT called here to prevent a flash
+    // of "/" children while router.replace is in-flight. The pathname effect above
+    // will hide the splash screen as soon as navigation completes.
+    router.replace(isAuthenticated ? '/dashboard' : '/login');
+  }, [pathname, isSessionInitialized, minimumDurationElapsed, isAuthenticated, error, router]);
 
-    return () => window.clearInterval(dotsTimer);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (pathname !== "/" || isSessionInitialized) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const sessionUrl =
-      process.env.NEXT_PUBLIC_AUTH_SESSION_URL || "/api/v1/auth/session";
-
-    const checkSession = async () => {
-      dispatch(sessionCheckStart());
-
-      try {
-        const response = await fetch(sessionUrl, {
-          credentials: "include",
-          signal: controller.signal,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data.user) {
-            dispatch(
-              setCredentials({
-                user: data.user,
-                token: data.token ?? null,
-              })
-            );
-            return;
-          }
-        }
-      } catch {
-        if (controller.signal.aborted) {
-          return;
-        }
-      }
-
-      if (!controller.signal.aborted) {
-        dispatch(sessionCheckComplete());
-      }
-    };
-
-    void checkSession();
-
-    return () => controller.abort();
-  }, [dispatch, isSessionInitialized, pathname]);
-
-  useEffect(() => {
-    if (pathname !== "/" || isLoading || !minimumDurationElapsed) {
-      return;
-    }
-
-    setShowSplash(false);
-
-    router.replace(isAuthenticated ? "/dashboard" : "/login");
-  }, [pathname, isLoading, minimumDurationElapsed, isAuthenticated, router]);
-
-  if (pathname !== "/" || !showSplash) {
+  // If not on root path or splash is hidden, render page children
+  if (pathname !== '/' || !showSplash) {
     return <>{children}</>;
   }
 
+  const handleRetry = () => {
+    dispatch(resetSessionCheck());
+  };
+
+  const handleProceedToLogin = () => {
+    router.replace('/login');
+  };
+
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-[#f3f4f6]">
-      <section
-        role="status"
-        aria-live="polite"
-        className="relative flex min-h-screen w-full items-center justify-center bg-[#f3f4f6] px-3"
-      >
+      {/* Container section without redundant role="status" */}
+      <section className="relative flex min-h-screen w-full flex-col items-center justify-center bg-[#f3f4f6] px-4">
         <div className="flex w-full flex-col items-center">
-          {/* Helmet */}
+          {/* Helmet Logo: Increased size for second screen branding state */}
           <div
-            className={`relative transition-all duration-300 ${
+            className={`relative transition-all duration-500 ease-out ${
               showBranding
-                ? "h-16 w-24 sm:h-20 sm:w-28"
-                : "h-32 w-44 sm:h-36 sm:w-48"
+                ? 'h-28 w-40 sm:h-36 sm:w-48 md:h-40 md:w-52'
+                : 'h-36 w-52 sm:h-44 sm:w-64 md:h-48 md:w-72'
             }`}
           >
             <Image
@@ -152,51 +106,86 @@ const SplashScreen = ({ children }: SplashScreenProps) => {
               alt="Futura Constructions helmet"
               fill
               priority
-              sizes="(max-width: 640px) 128px, 144px"
+              sizes="(max-width: 640px) 208px, (max-width: 768px) 256px, 288px"
               className="object-contain"
             />
           </div>
 
-          {/* Wordmark appears in the second splash state */}
+          {/* Wordmark appears in the second splash state with increased heading size */}
           {showBranding && (
-            <h1 className="mt-2 max-w-full px-2 text-center text-2xl font-bold tracking-normal text-[#202936] sm:text-3xl lg:text-4xl">
+            <h1 className="mt-4 max-w-full px-4 text-center text-3xl font-extrabold tracking-tight text-[#202936] sm:text-4xl md:text-5xl">
               FUTURA CONSTRUCTIONS
             </h1>
           )}
         </div>
 
-        {/* Loading message remains near the bottom */}
-        <div
-          role="status"
-          aria-live="polite"
-          className="absolute bottom-24 left-0 flex w-full items-center justify-center text-[15px] font-normal text-[#5B6472]"
-        >
-          <span className="animate-pulse">Preparing your dashboard</span>
+        {/* Backend Outage / Network Error Banner (Avoids silent redirect to /login) */}
+        {error && minimumDurationElapsed ? (
+          <div
+            role="alert"
+            className="absolute bottom-16 left-4 right-4 mx-auto max-w-md rounded-xl border border-red-200 bg-white p-4 shadow-lg sm:bottom-20"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+              <div className="flex-1">
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Connection Notice
+                </h2>
+                <p className="mt-1 text-xs text-slate-600">{error}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary-700 transition"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Retry Connection
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleProceedToLogin}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+                  >
+                    <span>Proceed to Login</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Loading message: single role="status" and CSS-only animated dots */
+          <div
+            role="status"
+            aria-live="polite"
+            className="absolute bottom-24 left-0 flex w-full items-center justify-center text-[15px] font-normal text-[#5B6472]"
+          >
+            <span className="animate-pulse motion-reduce:animate-none">
+              Preparing your dashboard
+            </span>
 
-          <span aria-hidden="true" className=" inline-flex gap-0.5">
-            <span
-              className={`transition-opacity delay-0 duration-300 ${
-                showLoadingDots ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              .
+            <span aria-hidden="true" className="ml-0.5 inline-flex gap-0.5">
+              <span
+                className="animate-splash-dot motion-reduce:animate-none"
+                style={{ animationDelay: '0ms' }}
+              >
+                .
+              </span>
+              <span
+                className="animate-splash-dot motion-reduce:animate-none"
+                style={{ animationDelay: '200ms' }}
+              >
+                .
+              </span>
+              <span
+                className="animate-splash-dot motion-reduce:animate-none"
+                style={{ animationDelay: '400ms' }}
+              >
+                .
+              </span>
             </span>
-            <span
-              className={`transition-opacity delay-200 duration-300 ${
-                showLoadingDots ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              .
-            </span>
-            <span
-              className={`transition-opacity delay-[400ms] duration-300 ${
-                showLoadingDots ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              .
-            </span>
-          </span>
-        </div>
+          </div>
+        )}
       </section>
     </main>
   );

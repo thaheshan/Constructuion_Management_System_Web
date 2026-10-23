@@ -5,3 +5,24 @@
 :root {
   --font-sans: 'Inter', sans-serif;
 }
+
+@keyframes splashDotFade {
+  0%, 20% {
+    opacity: 0;
+  }
+  50%, 100% {
+    opacity: 1;
+  }
+}
+
+.animate-splash-dot {
+  animation: splashDotFade 1.4s infinite ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-splash-dot {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
+
