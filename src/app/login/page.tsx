@@ -1,25 +1,29 @@
-'use client';
+"use client";
 
-import React, { useState, Suspense } from 'react';
-import { GuestRoute } from '@/components/common/GuestRoute';
-import { HeroPanel } from '@/components/auth/HeroPanel';
-import { TopUtilityBar } from '@/components/auth/TopUtilityBar';
-import { SignInForm } from '@/components/auth/SignInForm';
-import { SmsOtpFlow } from '@/components/auth/SmsOtpFlow';
-import { KioskTerminalView } from '@/components/auth/KioskTerminalView';
-import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
-import { SupportModal, SupportModalType } from '@/components/auth/SupportModal';
-import { Loader2 } from 'lucide-react';
+import React, { useState, Suspense } from "react";
+import { GuestRoute } from "@/components/common/GuestRoute";
+import { HeroPanel } from "@/components/auth/HeroPanel";
+import { TopUtilityBar } from "@/components/auth/TopUtilityBar";
+import { SignInForm } from "@/components/auth/SignInForm";
+import { SmsOtpFlow } from "@/components/auth/SmsOtpFlow";
+import { KioskTerminalView } from "@/components/auth/KioskTerminalView";
+import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal";
+import { SupportModal, SupportModalType } from "@/components/auth/SupportModal";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [viewMode, setViewMode] = useState<'signin' | 'sms-otp' | 'kiosk'>('signin');
-  const [prefilledIdentifier, setPrefilledIdentifier] = useState<string>('');
+  const [viewMode, setViewMode] = useState<"signin" | "sms-otp" | "kiosk">(
+    "signin",
+  );
+  const [prefilledIdentifier, setPrefilledIdentifier] = useState<string>("");
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
-  const [supportModal, setSupportModal] = useState<SupportModalType | null>(null);
+  const [supportModal, setSupportModal] = useState<SupportModalType | null>(
+    null,
+  );
 
   const handleSwitchToSmsOtp = (identifier?: string) => {
     if (identifier) setPrefilledIdentifier(identifier);
-    setViewMode('sms-otp');
+    setViewMode("sms-otp");
   };
 
   const handleForgotPassword = (identifier?: string) => {
@@ -30,8 +34,11 @@ export default function LoginPage() {
   return (
     <GuestRoute redirectTo="/">
       {/* If Kiosk Terminal mode is active, render the dedicated terminal experience */}
-      {viewMode === 'kiosk' && (
-        <KioskTerminalView onExit={() => setViewMode('signin')} redirectPath="/" />
+      {viewMode === "kiosk" && (
+        <KioskTerminalView
+          onExit={() => setViewMode("signin")}
+          redirectPath="/"
+        />
       )}
 
       {/* Main Authentication Screen (Desktop 2-column + Mobile responsive) */}
@@ -39,7 +46,7 @@ export default function LoginPage() {
         {/* Left Hero Panel: Desktop permanent half-screen, Mobile top banner */}
         <HeroPanel
           className="w-full lg:w-[48%] xl:w-1/2 flex-shrink-0"
-          onOpenHelp={() => setSupportModal('help')}
+          onOpenHelp={() => setSupportModal("help")}
         />
 
         {/* Right Section: Form Container */}
@@ -48,7 +55,7 @@ export default function LoginPage() {
           <div className="hidden lg:flex justify-end items-center p-6 xl:px-12">
             <TopUtilityBar
               variant="desktop"
-              onOpenHelp={() => setSupportModal('help')}
+              onOpenHelp={() => setSupportModal("help")}
             />
           </div>
 
@@ -68,33 +75,98 @@ export default function LoginPage() {
                   </div>
                 }
               >
-                {viewMode === 'signin' && (
+                {viewMode === "signin" && (
                   <SignInForm
                     redirectPath="/"
                     onSwitchToSmsOtp={handleSwitchToSmsOtp}
-                    onSwitchToKiosk={() => setViewMode('kiosk')}
+                    onSwitchToKiosk={() => setViewMode("kiosk")}
                     onForgotPassword={handleForgotPassword}
-                    onOpenHelp={() => setSupportModal('help')}
-                    onOpenPrivacy={() => setSupportModal('privacy')}
-                    onOpenLegal={() => setSupportModal('legal')}
+                    onOpenHelp={() => setSupportModal("help")}
+                    onOpenPrivacy={() => setSupportModal("privacy")}
+                    onOpenLegal={() => setSupportModal("legal")}
                   />
                 )}
 
-                {viewMode === 'sms-otp' && (
+                {viewMode === "sms-otp" && (
                   <SmsOtpFlow
                     initialPhone={prefilledIdentifier}
-                    onBackToPassword={() => setViewMode('signin')}
+                    onBackToPassword={() => setViewMode("signin")}
                     redirectPath="/"
                   />
                 )}
               </Suspense>
             </div>
+
+            {/* Desktop Footer (Outside the white card) */}
+            <div className="hidden lg:block mt-14 mb-[-20px] text-center space-y-3">
+              <p className="text-xs text-slate-500">
+                Need an account?{" "}
+                <a
+                  href="/register"
+                  className="font-bold text-slate-900 hover:text-futura-600 hover:underline transition"
+                >
+                  Signup
+                </a>
+              </p>
+
+              {/* Legal & Help Center Links */}
+              <div className="flex items-center justify-center gap-6 text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => setSupportModal("help")}
+                  className="hover:text-slate-600 transition"
+                >
+                  HELP CENTER
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSupportModal("privacy")}
+                  className="hover:text-slate-600 transition"
+                >
+                  PRIVACY POLICY
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSupportModal("legal")}
+                  className="hover:text-slate-600 transition"
+                >
+                  LEGAL
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Footer Section (Pinned at the bottom of the mobile viewport) */}
+          <div className="lg:hidden pb-6 pt-4 text-center">
+            <div className="flex items-center justify-center gap-3 text-[10px] font-bold tracking-wider uppercase text-slate-400">
+              <span className="text-slate-300">•</span>
+              <button
+                type="button"
+                onClick={() => setSupportModal("help")}
+                className="hover:text-slate-600 transition"
+              >
+                HELP CENTER
+              </button>
+              <button
+                type="button"
+                onClick={() => setSupportModal("privacy")}
+                className="hover:text-slate-600 transition"
+              >
+                PRIVACY POLICY
+              </button>
+              <span className="text-slate-300">•</span>
+              <button
+                type="button"
+                onClick={() => setSupportModal("legal")}
+                className="hover:text-slate-600 transition"
+              >
+                LEGAL
+              </button>
+            </div>
           </div>
 
           {/* Desktop Subtle Footer Spacer */}
-          <div className="hidden lg:block py-3 text-center text-[10px] text-slate-400">
-            Futura Construction Management System • Enterprise Security Layer v2.1
-          </div>
+          <div className="hidden lg:block py-3 text-center text-[10px] text-slate-400"></div>
         </section>
 
         {/* Modals for Forgot Password and Support */}
