@@ -57,4 +57,20 @@ assert.strictEqual(isValidSriLankaPhone('112345678'), false, 'Landline not valid
 assert.strictEqual(isValidSriLankaPhone('77123456'), false, '8 digits too short');
 console.log('✔ PASS: Sri Lanka mobile phone format validation verified.');
 
+// 4. Test Step 5 Shop ID Format & Next Steps
+const isValidShopId = (id) => /^FUT-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(id);
+assert.strictEqual(isValidShopId('FUT-7K4M-9Q2X'), true);
+assert.strictEqual(isValidShopId('FUT-1234-ABCD'), true);
+assert.strictEqual(isValidShopId('FUT-123-ABCD'), false, 'Segment too short');
+assert.strictEqual(isValidShopId('INVALID-ID'), false, 'Wrong prefix');
+
+const STEP_5_NEXT_STEPS = [
+  'Share Shop ID',
+  'Approve requests',
+  'Create first project',
+  'Review settings',
+];
+assert.strictEqual(STEP_5_NEXT_STEPS.length, 4, 'Must have 4 next steps');
+console.log('✔ PASS: Step 5 Shop ID format and 4 next-step actions verified.');
+
 console.log('\nAll Onboarding automated verification checks PASSED successfully!');

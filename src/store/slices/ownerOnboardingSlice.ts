@@ -50,6 +50,7 @@ const initialState: OwnerOnboardingState = {
     lockedUntil: null,
     error: null,
   },
+  shopId: 'FUT-7K4M-9Q2X',
   isDraftSaved: false,
   lastSavedAt: null,
 };
@@ -149,6 +150,9 @@ export const ownerOnboardingSlice = createSlice({
         }
       }
     },
+    setShopId: (state, action: PayloadAction<string>) => {
+      state.shopId = action.payload;
+    },
     saveDraftSuccess: (state) => {
       state.isDraftSaved = true;
       state.lastSavedAt = new Date().toISOString();
@@ -190,6 +194,7 @@ export const {
   decrementCountdown,
   resetCountdown,
   verifyOtp,
+  setShopId,
   saveDraftSuccess,
   restoreDraft,
   resetOnboarding,
