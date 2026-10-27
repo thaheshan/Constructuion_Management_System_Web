@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/verify-onboarding.js"
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "test:onboarding": "node scripts/verify-onboarding.js"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",
@@ -31,6 +32,7 @@
     "eslint-config-next": "^14.2.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.4.5"
   }
 }
