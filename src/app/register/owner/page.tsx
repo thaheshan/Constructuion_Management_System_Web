@@ -12,47 +12,77 @@ import { OnboardingProgressBar } from '@/components/auth/owner-onboarding/Onboar
 import { OwnerStep1YourDetails } from '@/components/auth/owner-onboarding/OwnerStep1YourDetails';
 import { OwnerStep2CompanyDetails } from '@/components/auth/owner-onboarding/OwnerStep2CompanyDetails';
 import { OwnerStep3VerifyOtp } from '@/components/auth/owner-onboarding/OwnerStep3VerifyOtp';
+import {
+  loadValidDraft,
+  clearOnboardingDraft,
+  OwnerOnboardingDraft,
+} from '@/utils/draftStorage';
 import { Sparkles, ArrowLeft, RefreshCw, X } from 'lucide-react';
+
+/**
+ * Clamps requested steps against the furthest reachable completed step.
+ * Non-numeric, zero or negative values fall back to step 1.
+ */
+function clampStep(rawStep: string | number | null | undefined, maxAllowed: number): number {
+  if (rawStep === null || rawStep === undefined) return 1;
+  const parsed = typeof rawStep === 'number' ? rawStep : parseInt(String(rawStep), 10);
+  if (isNaN(parsed) || parsed < 1) return 1;
+  return Math.min(parsed, maxAllowed);
+}
 
 function OwnerOnboardingWizardContent() {
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
-  const currentStep = useAppSelector((state) => state.ownerOnboarding.currentStep);
+  const { currentStep, furthestStepCompleted } = useAppSelector(
+    (state) => state.ownerOnboarding
+  );
 
   const [draftBannerVisible, setDraftBannerVisible] = useState(false);
-  const [savedDraftData, setSavedDraftData] = useState<any>(null);
+  const [savedDraftData, setSavedDraftData] = useState<OwnerOnboardingDraft | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
-  // Initialize step from URL on initial mount only
-  const isInitialMount = useRef(true);
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      const stepParam = searchParams.get('step');
-      if (stepParam) {
-        const parsed = parseInt(stepParam, 10);
-        if (parsed >= 1 && parsed <= 5 && parsed !== currentStep) {
-          dispatch(setStep(parsed));
-        }
-      }
-    }
-  }, [searchParams, dispatch, currentStep]);
+  // Maximum step index the user is allowed to navigate to based on actual completions
+  const maxAllowedStep = Math.min(5, Math.max(1, furthestStepCompleted + 1));
 
-  // Handle browser back and forward button events smoothly
+  // Guard flag to prevent URL-sync effect from running before initial param dispatch is applied
+  const isInitialized = useRef(false);
+
+  // 1. Dedicated one-time mount effect: initialize step from URL
+  useEffect(() => {
+    const rawParam = searchParams.get('step');
+    const clampedTarget = clampStep(rawParam, maxAllowedStep);
+    if (clampedTarget > 1) {
+      dispatch(setStep(clampedTarget));
+    }
+    isInitialized.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 2. Handle browser back / forward navigation cleanly with clamping
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
-      const step = parseInt(params.get('step') || '1', 10);
-      if (step >= 1 && step <= 5) {
-        dispatch(setStep(step));
+      const rawParam = params.get('step');
+      const targetStep = clampStep(rawParam, maxAllowedStep);
+      dispatch(setStep(targetStep));
+
+      // Correct URL immediately if user attempted to jump beyond allowed step via forward history
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('step') !== String(targetStep)) {
+          url.searchParams.set('step', String(targetStep));
+          window.history.replaceState(null, '', url.toString());
+        }
       }
     };
+
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [dispatch]);
+  }, [dispatch, maxAllowedStep]);
 
-  // Keep browser URL cleanly in sync with currentStep without triggering App Router remount
+  // 3. Keep browser URL in sync with Redux currentStep without flickering on first render
   useEffect(() => {
+    if (!isInitialized.current) return;
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       if (url.searchParams.get('step') !== String(currentStep)) {
@@ -62,21 +92,12 @@ function OwnerOnboardingWizardContent() {
     }
   }, [currentStep]);
 
-  // Check for saved draft on initial mount
+  // 4. Check for validated, unexpired saved draft on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const rawDraft = localStorage.getItem('futura_owner_onboarding_draft');
-        if (rawDraft) {
-          const parsed = JSON.parse(rawDraft);
-          if (parsed && (parsed.ownerDetails?.fullName || parsed.companyDetails?.companyName)) {
-            setSavedDraftData(parsed);
-            setDraftBannerVisible(true);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse draft from localStorage', e);
-      }
+    const draft = loadValidDraft();
+    if (draft) {
+      setSavedDraftData(draft);
+      setDraftBannerVisible(true);
     }
   }, []);
 
@@ -84,11 +105,15 @@ function OwnerOnboardingWizardContent() {
     if (savedDraftData) {
       dispatch(restoreDraft(savedDraftData));
       setDraftBannerVisible(false);
+      setSavedDraftData(null);
     }
   };
 
   const handleDismissDraft = () => {
+    // Purge draft from storage when user dismisses banner to start fresh
+    clearOnboardingDraft();
     setDraftBannerVisible(false);
+    setSavedDraftData(null);
   };
 
   return (
@@ -162,19 +187,12 @@ function OwnerOnboardingWizardContent() {
               {currentStep === 4 ? 'Review & Plan Selection' : 'Setup Complete'}
             </h2>
             <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-              Step 1 (Personal Details), Step 2 (Company Details), and Step 3 (Identity Verification) have been completed successfully. Subsequent onboarding phases will continue from here.
+              Remaining onboarding steps will be available in an upcoming release.
             </p>
             <div className="pt-3 flex justify-center gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  dispatch(setStep(3));
-                  if (typeof window !== 'undefined') {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('step', '3');
-                    window.history.pushState({}, '', url.toString());
-                  }
-                }}
+                onClick={() => dispatch(setStep(3))}
                 className="py-2 px-4 rounded-xl border border-slate-300 hover:border-slate-400 text-slate-700 text-xs font-bold transition flex items-center gap-2 cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />

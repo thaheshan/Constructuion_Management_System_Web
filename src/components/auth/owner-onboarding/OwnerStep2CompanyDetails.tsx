@@ -5,12 +5,14 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   updateCompanyDetails,
   setStep,
+  completeStep,
   saveDraftSuccess,
 } from '@/store/slices/ownerOnboardingSlice';
 import { DistrictSelector } from './DistrictSelector';
 import { LogoUploadZone } from './LogoUploadZone';
 import { SaveDraftModal } from './SaveDraftModal';
 import { SriLankanDistrict } from '@/types/onboarding';
+import { saveOnboardingDraft } from '@/utils/draftStorage';
 import {
   Briefcase,
   MapPin,
@@ -184,11 +186,9 @@ export const OwnerStep2CompanyDetails: React.FC<OwnerStep2CompanyDetailsProps> =
 
     if (Object.keys(validationErrors).length === 0) {
       syncToRedux();
+      dispatch(completeStep(2));
       dispatch(setStep(3));
       if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        url.searchParams.set('step', '3');
-        window.history.pushState({}, '', url.toString());
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
@@ -198,9 +198,6 @@ export const OwnerStep2CompanyDetails: React.FC<OwnerStep2CompanyDetailsProps> =
     syncToRedux();
     dispatch(setStep(1));
     if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.searchParams.set('step', '1');
-      window.history.pushState({}, '', url.toString());
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -210,43 +207,39 @@ export const OwnerStep2CompanyDetails: React.FC<OwnerStep2CompanyDetailsProps> =
     const timestamp = new Date().toISOString();
     setSavedTimestamp(timestamp);
 
-    // Save to localStorage
-    if (typeof window !== 'undefined') {
-      try {
-        const draftPayload = {
-          currentStep: 2,
-          ownerDetails,
-          companyDetails: {
-            companyName: companyName.trim(),
-            businessType,
-            businessRegNo: businessRegNo.trim(),
-            companyPhonePrefix,
-            companyPhone: companyPhone.trim(),
-            companyEmail: companyEmail.trim(),
-            addressLine: addressLine.trim(),
-            city: city.trim(),
-            district,
-            vatTinNumber: vatTinNumber.trim(),
-            epfEmployerNo: epfEmployerNo.trim(),
-            etfEmployerNo: etfEmployerNo.trim(),
-            isVatRegistered,
-            currency,
-            financialYearStart,
-            logoBase64,
-            logoFileName,
-          },
-          lastSavedAt: timestamp,
-        };
-        localStorage.setItem(
-          'futura_owner_onboarding_draft',
-          JSON.stringify(draftPayload)
-        );
-        dispatch(saveDraftSuccess());
-        setShowDraftModal(true);
-      } catch (err) {
-        console.error('Failed to save onboarding draft to localStorage', err);
-      }
-    }
+    // Save strictly sanitized payload (without passwords/confirmPassword) to localStorage with timestamp & expiry
+    saveOnboardingDraft({
+      currentStep: 2,
+      furthestStepCompleted: 1,
+      ownerDetails: {
+        fullName: ownerDetails.fullName,
+        email: ownerDetails.email,
+        phonePrefix: ownerDetails.phonePrefix,
+        phone: ownerDetails.phone,
+        agreedToTerms: ownerDetails.agreedToTerms,
+      },
+      companyDetails: {
+        companyName: companyName.trim(),
+        businessType,
+        businessRegNo: businessRegNo.trim(),
+        companyPhonePrefix,
+        companyPhone: companyPhone.trim(),
+        companyEmail: companyEmail.trim(),
+        addressLine: addressLine.trim(),
+        city: city.trim(),
+        district,
+        vatTinNumber: vatTinNumber.trim(),
+        epfEmployerNo: epfEmployerNo.trim(),
+        etfEmployerNo: etfEmployerNo.trim(),
+        isVatRegistered,
+        currency,
+        financialYearStart,
+        logoBase64,
+        logoFileName,
+      },
+    });
+    dispatch(saveDraftSuccess());
+    setShowDraftModal(true);
   };
 
   const handleBlur = (field: string) => {

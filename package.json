@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test \"src/**/*.test.ts\"",
-    "test:onboarding": "node scripts/verify-onboarding.js"
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",

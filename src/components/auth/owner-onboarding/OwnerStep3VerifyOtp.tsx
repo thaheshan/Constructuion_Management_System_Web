@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setStep,
+  completeStep,
   setVerificationCode,
   setVerificationChannel,
   decrementCountdown,
@@ -149,20 +150,15 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
   const handleBack = () => {
     dispatch(setStep(2));
     if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.searchParams.set('step', '2');
-      window.history.pushState({}, '', url.toString());
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleNextStep = useCallback(() => {
-    // When verification succeeds, move to Review / Step 4
+    // When verification succeeds, complete Step 3 and move to Review / Step 4
+    dispatch(completeStep(3));
     dispatch(setStep(4));
     if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.searchParams.set('step', '4');
-      window.history.pushState({}, '', url.toString());
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [dispatch]);

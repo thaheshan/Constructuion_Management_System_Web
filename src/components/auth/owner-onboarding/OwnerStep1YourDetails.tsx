@@ -3,8 +3,16 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { updateOwnerDetails, setStep } from '@/store/slices/ownerOnboardingSlice';
-import { PasswordStrengthMeter, calculatePasswordStrength } from './PasswordStrengthMeter';
+import {
+  updateOwnerDetails,
+  setStep,
+  completeStep,
+} from '@/store/slices/ownerOnboardingSlice';
+import { PasswordStrengthMeter } from './PasswordStrengthMeter';
+import {
+  calculatePasswordStrength,
+  validateSriLankaPhone,
+} from '@/utils/validation';
 import {
   User,
   Eye,
@@ -64,10 +72,9 @@ export const OwnerStep1YourDetails: React.FC<OwnerStep1YourDetailsProps> = ({
     }
 
     // Sri Lanka phone validation (+94 7X XXX XXXX)
-    const cleanPhone = phone.replace(/\s+/g, '');
-    if (!cleanPhone) {
+    if (!phone.trim()) {
       errs.phone = 'Mobile number is required for SMS verification';
-    } else if (!/^7[0-9]{8}$/.test(cleanPhone)) {
+    } else if (!validateSriLankaPhone(phone)) {
       errs.phone = 'Enter a valid 9-digit Sri Lankan mobile number (e.g. 77 123 4567)';
     }
 
@@ -124,12 +131,10 @@ export const OwnerStep1YourDetails: React.FC<OwnerStep1YourDetailsProps> = ({
           agreedToTerms,
         })
       );
-      // Advance to Step 2 smoothly
+      // Mark step 1 completed and advance to Step 2 smoothly
+      dispatch(completeStep(1));
       dispatch(setStep(2));
       if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        url.searchParams.set('step', '2');
-        window.history.pushState({}, '', url.toString());
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }

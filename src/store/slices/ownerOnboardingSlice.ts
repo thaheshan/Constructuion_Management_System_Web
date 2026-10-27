@@ -4,6 +4,7 @@ import {
   OwnerDetails,
   CompanyDetails,
   VerificationChannel,
+  RestoreDraftPayload,
 } from '@/types/onboarding';
 
 const initialOwnerDetails: OwnerDetails = {
@@ -38,6 +39,7 @@ const initialCompanyDetails: CompanyDetails = {
 
 const initialState: OwnerOnboardingState = {
   currentStep: 1,
+  furthestStepCompleted: 0,
   ownerDetails: initialOwnerDetails,
   companyDetails: initialCompanyDetails,
   verification: {
@@ -60,6 +62,12 @@ export const ownerOnboardingSlice = createSlice({
   reducers: {
     setStep: (state, action: PayloadAction<number>) => {
       state.currentStep = action.payload;
+    },
+    completeStep: (state, action: PayloadAction<number>) => {
+      state.furthestStepCompleted = Math.max(
+        state.furthestStepCompleted,
+        action.payload
+      );
     },
     updateOwnerDetails: (
       state,
@@ -155,12 +163,17 @@ export const ownerOnboardingSlice = createSlice({
     },
     restoreDraft: (
       state,
-      action: PayloadAction<Partial<OwnerOnboardingState>>
+      action: PayloadAction<RestoreDraftPayload>
     ) => {
       if (action.payload.ownerDetails) {
+        // Strip sensitive password / confirmPassword values if present
+        const safeOwnerDetails = { ...action.payload.ownerDetails };
+        delete (safeOwnerDetails as any).password;
+        delete (safeOwnerDetails as any).confirmPassword;
+
         state.ownerDetails = {
           ...state.ownerDetails,
-          ...action.payload.ownerDetails,
+          ...safeOwnerDetails,
         };
       }
       if (action.payload.companyDetails) {
@@ -169,11 +182,22 @@ export const ownerOnboardingSlice = createSlice({
           ...action.payload.companyDetails,
         };
       }
-      if (typeof action.payload.currentStep === 'number') {
-        state.currentStep = action.payload.currentStep;
-      }
+
+      // Never resume directly into OTP step from a draft; cap restored step at company details (Step 2)
+      const rawRestoredStep = action.payload.currentStep ?? 1;
+      state.currentStep = Math.min(Math.max(1, rawRestoredStep), 2);
+
+      // Restore furthest completed step consistently
+      const defaultFurthest = state.currentStep > 1 ? state.currentStep - 1 : 0;
+      const rawFurthest = action.payload.furthestStepCompleted ?? defaultFurthest;
+      state.furthestStepCompleted = Math.min(Math.max(state.furthestStepCompleted, rawFurthest), 2);
+
       state.isDraftSaved = true;
-      state.lastSavedAt = action.payload.lastSavedAt || new Date().toISOString();
+      state.lastSavedAt =
+        action.payload.lastSavedAt ||
+        (typeof action.payload.savedAt === 'number'
+          ? new Date(action.payload.savedAt).toISOString()
+          : new Date().toISOString());
     },
     resetOnboarding: () => initialState,
   },
@@ -181,6 +205,7 @@ export const ownerOnboardingSlice = createSlice({
 
 export const {
   setStep,
+  completeStep,
   updateOwnerDetails,
   updateCompanyDetails,
   setVerificationDigit,
