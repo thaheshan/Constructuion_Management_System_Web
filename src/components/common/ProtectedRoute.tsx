@@ -30,7 +30,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading, role, user } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, isLoading, isSessionInitialized, role, user } = useAppSelector((state) => state.auth);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const isRoleAllowed = !allowedRoles || (userRole && allowedRoles.includes(userRole));
 
   useEffect(() => {
-    if (isClient && !isLoading) {
+    if (isClient && isSessionInitialized && !isLoading) {
       if (!isAuthenticated) {
         const target = pathname && pathname !== '/' ? `?redirect=${encodeURIComponent(pathname)}` : '';
         router.replace(`${fallbackUrl}${target}`);
@@ -49,10 +49,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         router.replace(unauthorizedUrl);
       }
     }
-  }, [isClient, isLoading, isAuthenticated, isRoleAllowed, router, fallbackUrl, unauthorizedUrl, pathname]);
+  }, [isClient, isSessionInitialized, isLoading, isAuthenticated, isRoleAllowed, router, fallbackUrl, unauthorizedUrl, pathname]);
 
-  // SSR or initial hydration loading state
-  if (!isClient || isLoading) {
+  // SSR or initial session hydration loading state
+  if (!isClient || isLoading || !isSessionInitialized) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-600">
         <div className="flex flex-col items-center gap-3 p-8 rounded-xl bg-white border border-slate-200 shadow-sm">

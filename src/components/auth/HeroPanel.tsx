@@ -18,13 +18,13 @@ interface FeatureItem {
 
 const FEATURES: FeatureItem[] = [
   {
-    icon: <WifiOff className="w-5 h-5 text-futura-400" />,
+    icon: <img src="./images/Question.png" alt="" />,
     title: "Offline-First Sync",
     description:
       "Capture site logs even in zero-connectivity zones. Auto-syncs when back in range.",
   },
   {
-    icon: <ShieldCheck className="w-5 h-5 text-futura-400" />,
+    icon: <img src="./images/Question.png" alt="" />,
     title: "Audit-Ready Compliance",
     description:
       "Every transaction and attendance record is verified with GPS and timestamps.",
@@ -57,9 +57,9 @@ export const HeroPanel: React.FC<HeroPanelProps> = ({
         </div>
 
         {/* Hero Middle Content */}
-        <div className="my-auto py-8 lg:py-12 max-w-xl">
+        <div className="my-auto pt-24 pb-6 lg:py-12 max-w-xl">
           {/* Main Headline */}
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.15]">
+          <h1 className="text-[28px] sm:text-[30px] lg:text-[48px] font-extrabold tracking-tight text-white leading-[1.15]">
             From site activity <br className="hidden sm:inline" />
             to profit control.
           </h1>
@@ -78,10 +78,10 @@ export const HeroPanel: React.FC<HeroPanelProps> = ({
                   {feature.icon}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-100 tracking-wide">
+                  <h3 className="text-[20px] font-bold text-slate-100 tracking-wide">
                     {feature.title}
                   </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed mt-0.5 max-w-md">
+                  <p className="text-[14px] text-slate-400 leading-relaxed mt-0.5 max-w-md">
                     {feature.description}
                   </p>
                 </div>
@@ -94,10 +94,10 @@ export const HeroPanel: React.FC<HeroPanelProps> = ({
         <div className="hidden lg:block pt-8 border-t border-slate-800/90">
           <div className="flex items-center gap-12">
             <div>
-              <div className="text-2xl lg:text-3xl font-black text-white tracking-tight">
+              <div className="text-2xl lg:text-[20px] font-black text-white tracking-tight">
                 2, 450+
               </div>
-              <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-slate-400 mt-0.5">
+              <div className="text-[12px] font-bold tracking-[0.2em] uppercase text-slate-400 mt-0.5">
                 ACTIVE SITES
               </div>
             </div>
@@ -105,10 +105,10 @@ export const HeroPanel: React.FC<HeroPanelProps> = ({
             <div className="w-[1px] h-8 bg-slate-800" />
 
             <div>
-              <div className="text-2xl lg:text-3xl font-black text-white tracking-tight">
+              <div className="text-2xl lg:text-[20px] font-black text-white tracking-tight">
                 99.9%
               </div>
-              <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-slate-400 mt-0.5">
+              <div className="text-[12px] font-bold tracking-[0.2em] uppercase text-slate-400 mt-0.5">
                 UPTIME
               </div>
             </div>

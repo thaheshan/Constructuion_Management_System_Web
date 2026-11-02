@@ -15,6 +15,7 @@ const initialState: AuthState = {
   token: null,
   isAuthenticated: false,
   isLoading: false,
+  isSessionInitialized: false,
   error: null,
 };
 
@@ -31,6 +32,7 @@ export const authSlice = createSlice({
       action: PayloadAction<{ user: UserProfile; token: string }>
     ) => {
       state.isLoading = false;
+      state.isSessionInitialized = true;
       state.isAuthenticated = true;
       state.user = action.payload.user;
       state.role = action.payload.user.role;
@@ -39,21 +41,46 @@ export const authSlice = createSlice({
     },
     loginFailure: (state, action: PayloadAction<string>) => {
       state.isLoading = false;
+      state.isSessionInitialized = true;
       state.isAuthenticated = false;
       state.error = action.payload;
     },
     setCredentials: (
       state,
-      action: PayloadAction<{ user: UserProfile; token: string }>
+      action: PayloadAction<{ user: UserProfile; token?: string | null }>
     ) => {
+      state.isLoading = false;
       state.isAuthenticated = true;
+      state.isSessionInitialized = true;
       state.user = action.payload.user;
       state.role = action.payload.user.role;
-      state.token = action.payload.token;
+      state.token = action.payload.token ?? null;
       state.error = null;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
+    },
+    sessionCheckStart: (state) => {
+      state.isLoading = true;
+      state.error = null;
+    },
+    sessionCheckComplete: (state) => {
+      state.isLoading = false;
+      state.isSessionInitialized = true;
+    },
+    sessionCheckFailure: (state, action: PayloadAction<string>) => {
+      state.isLoading = false;
+      state.isSessionInitialized = true;
+      state.isAuthenticated = false;
+      state.error = action.payload;
+    },
+    sessionCheckAbort: (state) => {
+      state.isLoading = false;
+    },
+    resetSessionCheck: (state) => {
+      state.isLoading = false;
+      state.isSessionInitialized = false;
+      state.error = null;
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
@@ -68,6 +95,7 @@ export const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       state.isLoading = false;
+      state.isSessionInitialized = true;
       state.error = null;
     },
     /**
@@ -81,6 +109,7 @@ export const authSlice = createSlice({
       }
       const assignedRole = action.payload.role || 'STAFF';
       state.isLoading = false;
+      state.isSessionInitialized = true;
       state.isAuthenticated = true;
       state.role = assignedRole;
       state.user = {
@@ -101,6 +130,11 @@ export const {
   loginFailure,
   setCredentials,
   setLoading,
+  sessionCheckStart,
+  sessionCheckComplete,
+  sessionCheckFailure,
+  sessionCheckAbort,
+  resetSessionCheck,
   setError,
   clearError,
   logout,

@@ -1,6 +1,8 @@
 import './globals.css';
 import React from 'react';
 import StoreProvider from '@/store/provider';
+import AuthBootstrap from '@/components/auth/AuthBootstrap';
+import SplashScreen from '@/components/splash-screen/SplashScreen';
 
 export const metadata = {
   title: 'Construction Management System (CMS) — Portal',
@@ -12,7 +14,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="bg-slate-50 text-slate-900 min-h-screen antialiased">
         <StoreProvider>
-          {children}
+          <AuthBootstrap>
+            <SplashScreen>{children}</SplashScreen>
+          </AuthBootstrap>
         </StoreProvider>
       </body>
     </html>

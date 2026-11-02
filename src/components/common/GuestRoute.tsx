@@ -18,7 +18,7 @@ interface GuestRouteProps {
 
 export const GuestRoute: React.FC<GuestRouteProps> = ({ children, redirectTo = '/' }) => {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, isLoading, isSessionInitialized } = useAppSelector((state) => state.auth);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -26,12 +26,12 @@ export const GuestRoute: React.FC<GuestRouteProps> = ({ children, redirectTo = '
   }, []);
 
   useEffect(() => {
-    if (isClient && !isLoading && isAuthenticated) {
+    if (isClient && isSessionInitialized && !isLoading && isAuthenticated) {
       router.replace(redirectTo);
     }
-  }, [isClient, isLoading, isAuthenticated, router, redirectTo]);
+  }, [isClient, isSessionInitialized, isLoading, isAuthenticated, router, redirectTo]);
 
-  if (!isClient || isLoading) {
+  if (!isClient || isLoading || !isSessionInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
