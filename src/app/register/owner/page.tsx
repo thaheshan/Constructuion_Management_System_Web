@@ -12,12 +12,14 @@ import { OnboardingProgressBar } from '@/components/auth/owner-onboarding/Onboar
 import { OwnerStep1YourDetails } from '@/components/auth/owner-onboarding/OwnerStep1YourDetails';
 import { OwnerStep2CompanyDetails } from '@/components/auth/owner-onboarding/OwnerStep2CompanyDetails';
 import { OwnerStep3VerifyOtp } from '@/components/auth/owner-onboarding/OwnerStep3VerifyOtp';
+import { OwnerStep4ReviewConfirm } from '@/components/auth/owner-onboarding/OwnerStep4ReviewConfirm';
+import { OwnerStep5CompanyReady } from '@/components/auth/owner-onboarding/OwnerStep5CompanyReady';
 import {
   loadValidDraft,
   clearOnboardingDraft,
   OwnerOnboardingDraft,
 } from '@/utils/draftStorage';
-import { Sparkles, ArrowLeft, RefreshCw, X } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 
 /**
  * Clamps requested steps against the furthest reachable completed step.
@@ -176,30 +178,11 @@ function OwnerOnboardingWizardContent() {
         {currentStep === 3 && (
           <OwnerStep3VerifyOtp onOpenHelp={() => setIsHelpOpen(true)} />
         )}
-
-        {/* Step 4 & 5 Placeholders for subsequent stories */}
-        {currentStep > 3 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-futura-50 border border-futura-100 flex items-center justify-center text-futura-600 mx-auto shadow-sm">
-              <Sparkles className="w-7 h-7" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900">
-              {currentStep === 4 ? 'Review & Plan Selection' : 'Setup Complete'}
-            </h2>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-              Remaining onboarding steps will be available in an upcoming release.
-            </p>
-            <div className="pt-3 flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => dispatch(setStep(3))}
-                className="py-2 px-4 rounded-xl border border-slate-300 hover:border-slate-400 text-slate-700 text-xs font-bold transition flex items-center gap-2 cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Return to Step 3 (Verify)</span>
-              </button>
-            </div>
-          </div>
+        {currentStep === 4 && (
+          <OwnerStep4ReviewConfirm onOpenHelp={() => setIsHelpOpen(true)} />
+        )}
+        {currentStep === 5 && (
+          <OwnerStep5CompanyReady onOpenHelp={() => setIsHelpOpen(true)} />
         )}
       </main>
     </div>

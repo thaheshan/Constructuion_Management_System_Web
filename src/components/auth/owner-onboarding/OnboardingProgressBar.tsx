@@ -11,8 +11,8 @@ const STEP_TITLES: Record<number, string> = {
   1: 'YOUR DETAILS',
   2: 'COMPANY DETAILS',
   3: 'VERIFY',
-  4: 'PLAN SELECTION',
-  5: 'CONFIRMATION',
+  4: 'REVIEW',
+  5: 'COMPANY READY',
 };
 
 export const OnboardingProgressBar: React.FC<OnboardingProgressBarProps> = ({

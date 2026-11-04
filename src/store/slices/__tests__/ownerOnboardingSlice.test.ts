@@ -4,6 +4,7 @@ import {
   ownerOnboardingSlice,
   setStep,
   completeStep,
+  setShopId,
   restoreDraft,
   resetOnboarding,
   updateOwnerDetails,
@@ -14,6 +15,7 @@ test('ownerOnboardingSlice: initialState sets default values', () => {
   assert.equal(state.currentStep, 1);
   assert.equal(state.furthestStepCompleted, 0);
   assert.equal(state.ownerDetails.fullName, '');
+  assert.equal(state.shopId, 'FUT-7K4M-9Q2X');
   assert.equal(state.isDraftSaved, false);
 });
 
@@ -29,9 +31,23 @@ test('ownerOnboardingSlice: completeStep records furthest completed step monoton
   state = ownerOnboardingSlice.reducer(state, completeStep(2));
   assert.equal(state.furthestStepCompleted, 2);
 
+  state = ownerOnboardingSlice.reducer(state, completeStep(3));
+  assert.equal(state.furthestStepCompleted, 3);
+
+  state = ownerOnboardingSlice.reducer(state, completeStep(4));
+  assert.equal(state.furthestStepCompleted, 4);
+
   // Does not regress if completeStep is called with a lower number
   state = ownerOnboardingSlice.reducer(state, completeStep(1));
-  assert.equal(state.furthestStepCompleted, 2);
+  assert.equal(state.furthestStepCompleted, 4);
+});
+
+test('ownerOnboardingSlice: setShopId updates shopId value', () => {
+  const state = ownerOnboardingSlice.reducer(
+    undefined,
+    setShopId('FUT-9A8B-7C6D')
+  );
+  assert.equal(state.shopId, 'FUT-9A8B-7C6D');
 });
 
 test('ownerOnboardingSlice: restoreDraft strips password and confirmPassword', () => {
@@ -76,7 +92,7 @@ test('ownerOnboardingSlice: restoreDraft caps currentStep and furthestStepComple
 });
 
 test('ownerOnboardingSlice: resetOnboarding resets state back to initial values', () => {
-  let state = ownerOnboardingSlice.reducer(undefined, completeStep(3));
+  let state = ownerOnboardingSlice.reducer(undefined, completeStep(4));
   state = ownerOnboardingSlice.reducer(
     state,
     updateOwnerDetails({ fullName: 'Alice' })
@@ -86,4 +102,5 @@ test('ownerOnboardingSlice: resetOnboarding resets state back to initial values'
   assert.equal(state.currentStep, 1);
   assert.equal(state.furthestStepCompleted, 0);
   assert.equal(state.ownerDetails.fullName, '');
+  assert.equal(state.shopId, 'FUT-7K4M-9Q2X');
 });
