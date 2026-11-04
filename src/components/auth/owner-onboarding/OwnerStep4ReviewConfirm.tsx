@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   User,
   Briefcase,
@@ -10,25 +10,25 @@ import {
   ArrowRight,
   Shield,
   Loader2,
-} from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+} from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   setStep,
   completeStep,
   setShopId,
-} from '@/store/slices/ownerOnboardingSlice';
-import { clearOnboardingDraft } from '@/utils/draftStorage';
+} from "@/store/slices/ownerOnboardingSlice";
+import { clearOnboardingDraft } from "@/utils/draftStorage";
 
 interface OwnerStep4ReviewConfirmProps {
   onOpenHelp?: () => void;
 }
 
-export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = ({
-  onOpenHelp,
-}) => {
+export const OwnerStep4ReviewConfirm: React.FC<
+  OwnerStep4ReviewConfirmProps
+> = ({ onOpenHelp }) => {
   const dispatch = useAppDispatch();
   const { ownerDetails, companyDetails, shopId } = useAppSelector(
-    (state) => state.ownerOnboarding
+    (state) => state.ownerOnboarding,
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,10 +36,10 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
   // Format mobile phone with country code
   const formatPhone = (prefix?: string, phoneNum?: string) => {
     if (!phoneNum || !phoneNum.trim()) {
-      return '+94 7X XXX 1234';
+      return "+94 7X XXX 1234";
     }
-    const clean = phoneNum.replace(/\s+/g, '');
-    const pfx = prefix || '+94';
+    const clean = phoneNum.replace(/\s+/g, "");
+    const pfx = prefix || "+94";
     if (clean.length === 9) {
       return `${pfx} ${clean.slice(0, 2)} ${clean.slice(2, 5)} ${clean.slice(5)}`;
     }
@@ -55,24 +55,24 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
     ].filter(Boolean);
 
     if (parts.length > 0) {
-      return parts.join(', ');
+      return parts.join(", ");
     }
-    return '45/A High Level Rd, Colombo 05';
+    return "45/A High Level Rd, Colombo 05";
   };
 
   // Format currency
   const formatCurrency = (curr?: string) => {
-    if (!curr || !curr.trim()) return 'Sri Lankan Rupee (LKR)';
-    if (curr.includes('LKR') || curr.includes('Sri Lankan Rupee')) {
-      return 'Sri Lankan Rupee (LKR)';
+    if (!curr || !curr.trim()) return "Sri Lankan Rupee (LKR)";
+    if (curr.includes("LKR") || curr.includes("Sri Lankan Rupee")) {
+      return "Sri Lankan Rupee (LKR)";
     }
     return curr;
   };
 
   // Format financial year start
   const formatFinancialYear = (fy?: string) => {
-    if (!fy || !fy.trim()) return '1st April';
-    if (fy === '1 April' || fy === '1st April') return '1st April';
+    if (!fy || !fy.trim()) return "1st April";
+    if (fy === "1 April" || fy === "1st April") return "1st April";
     return fy;
   };
 
@@ -81,36 +81,36 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
     if (companyDetails.isVatRegistered) {
       if (companyDetails.vatTinNumber?.trim()) {
         const raw = companyDetails.vatTinNumber.trim();
-        return raw.toUpperCase().startsWith('VAT-')
+        return raw.toUpperCase().startsWith("VAT-")
           ? raw
-          : `VAT-${raw.replace(/^TIN-?/i, '')}`;
+          : `VAT-${raw.replace(/^TIN-?/i, "")}`;
       }
-      return 'VAT-11223344';
+      return "VAT-11223344";
     }
     return companyDetails.vatTinNumber?.trim()
       ? companyDetails.vatTinNumber
-      : 'VAT-11223344';
+      : "VAT-11223344";
   };
 
   // Navigation handlers
   const handleEditOwnerAccount = () => {
     dispatch(setStep(1));
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleEditCompanyDetails = () => {
     dispatch(setStep(2));
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleBack = () => {
     dispatch(setStep(3));
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -132,8 +132,8 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
       // Complete Step 4 and advance to Step 5 (Company Ready)
       dispatch(completeStep(4));
       dispatch(setStep(5));
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } finally {
       setIsSubmitting(false);
@@ -178,7 +178,7 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
               FULL NAME
             </span>
             <span className="block text-sm font-semibold text-[#1B2430]">
-              {ownerDetails.fullName?.trim() || 'John Alexander Perera'}
+              {ownerDetails.fullName?.trim() || "John Alexander Perera"}
             </span>
           </div>
 
@@ -198,7 +198,7 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
               EMAIL
             </span>
             <span className="block text-sm font-medium text-slate-800 break-all">
-              {ownerDetails.email?.trim() || 'j.perera@futuraconst.com'}
+              {ownerDetails.email?.trim() || "j.perera@futuraconst.com"}
             </span>
           </div>
 
@@ -240,7 +240,8 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
               COMPANY NAME
             </span>
             <span className="block text-sm font-semibold text-[#1B2430]">
-              {companyDetails.companyName?.trim() || 'Futura Constructions (Pvt) Ltd'}
+              {companyDetails.companyName?.trim() ||
+                "Futura Constructions (Pvt) Ltd"}
             </span>
           </div>
 
@@ -251,7 +252,8 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
                 BUSINESS TYPE
               </span>
               <span className="block text-sm font-medium text-slate-800">
-                {companyDetails.businessType?.trim() || 'Civil Engineering & Contracting'}
+                {companyDetails.businessType?.trim() ||
+                  "Civil Engineering & Contracting"}
               </span>
             </div>
 
@@ -271,7 +273,7 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
                 TAX IDENTIFICATION (TIN)
               </span>
               <span className="block text-sm font-medium font-mono text-slate-800">
-                {companyDetails.vatTinNumber?.trim() || 'TIN-992834-001'}
+                {companyDetails.vatTinNumber?.trim() || "TIN-992834-001"}
               </span>
             </div>
 
@@ -314,11 +316,12 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
           <Key className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-bold text-[#1B2430]">
-            Your Shop ID
-          </h3>
+          <h3 className="text-sm font-bold text-[#1B2430]">Your Shop ID</h3>
           <p className="text-xs sm:text-[13px] text-slate-600 mt-1 leading-relaxed">
-            After you confirm, we generate a unique <span className="font-semibold text-slate-800">Shop ID</span>. Share it with your team so they can request access to this company profile.
+            After you confirm, we generate a unique{" "}
+            <span className="font-semibold text-slate-800">Shop ID</span>. Share
+            it with your team so they can request access to this company
+            profile.
           </p>
         </div>
       </div>
@@ -393,4 +396,3 @@ export const OwnerStep4ReviewConfirm: React.FC<OwnerStep4ReviewConfirmProps> = (
 };
 
 export default OwnerStep4ReviewConfirm;
-
