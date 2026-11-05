@@ -7,13 +7,17 @@ import {
   setStep,
   restoreDraft,
 } from '@/store/slices/ownerOnboardingSlice';
+import { GuestRoute } from '@/components/common/GuestRoute';
 import { OwnerOnboardingHeader } from '@/components/auth/owner-onboarding/OwnerOnboardingHeader';
 import { OnboardingProgressBar } from '@/components/auth/owner-onboarding/OnboardingProgressBar';
 import { OwnerStep1YourDetails } from '@/components/auth/owner-onboarding/OwnerStep1YourDetails';
 import { OwnerStep2CompanyDetails } from '@/components/auth/owner-onboarding/OwnerStep2CompanyDetails';
 import { OwnerStep3VerifyOtp } from '@/components/auth/owner-onboarding/OwnerStep3VerifyOtp';
+import { OwnerStep4Review } from '@/components/auth/owner-onboarding/OwnerStep4Review';
 import { OwnerStep5CompanyReady } from '@/components/auth/owner-onboarding/OwnerStep5CompanyReady';
-import { Sparkles, ArrowLeft, ArrowRight, RefreshCw, X } from 'lucide-react';
+import { TOTAL_STEPS } from '@/config/onboardingSteps';
+import { RefreshCw, X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 function OwnerOnboardingWizardContent() {
   const searchParams = useSearchParams();
@@ -24,7 +28,7 @@ function OwnerOnboardingWizardContent() {
   const [savedDraftData, setSavedDraftData] = useState<any>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
-  // Initialize step from URL on initial mount only
+  // Initialize step from URL on initial mount once
   const isInitialMount = useRef(true);
   useEffect(() => {
     if (isInitialMount.current) {
@@ -32,7 +36,7 @@ function OwnerOnboardingWizardContent() {
       const stepParam = searchParams.get('step');
       if (stepParam) {
         const parsed = parseInt(stepParam, 10);
-        if (parsed >= 1 && parsed <= 5 && parsed !== currentStep) {
+        if (parsed >= 1 && parsed <= TOTAL_STEPS && parsed !== currentStep) {
           dispatch(setStep(parsed));
         }
       }
@@ -44,24 +48,13 @@ function OwnerOnboardingWizardContent() {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const step = parseInt(params.get('step') || '1', 10);
-      if (step >= 1 && step <= 5) {
+      if (step >= 1 && step <= TOTAL_STEPS) {
         dispatch(setStep(step));
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [dispatch]);
-
-  // Keep browser URL cleanly in sync with currentStep without triggering App Router remount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      if (url.searchParams.get('step') !== String(currentStep)) {
-        url.searchParams.set('step', String(currentStep));
-        window.history.replaceState(null, '', url.toString());
-      }
-    }
-  }, [currentStep]);
 
   // Check for saved draft on initial mount
   useEffect(() => {
@@ -120,13 +113,15 @@ function OwnerOnboardingWizardContent() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="sm"
                 onClick={handleApplyDraft}
-                className="px-3 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-sm cursor-pointer"
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-1 rounded-xl"
               >
                 Restore
-              </button>
+              </Button>
               <button
                 type="button"
                 onClick={handleDismissDraft}
@@ -140,7 +135,7 @@ function OwnerOnboardingWizardContent() {
         )}
 
         {/* Horizontal Progress Bar */}
-        <OnboardingProgressBar currentStep={currentStep} totalSteps={5} />
+        <OnboardingProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} />
 
         {/* Step Views */}
         {currentStep === 1 && (
@@ -152,56 +147,9 @@ function OwnerOnboardingWizardContent() {
         {currentStep === 3 && (
           <OwnerStep3VerifyOtp onOpenHelp={() => setIsHelpOpen(true)} />
         )}
-
-        {/* Step 4 Review & Plan Selection placeholder */}
         {currentStep === 4 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-futura-50 border border-futura-100 flex items-center justify-center text-futura-600 mx-auto shadow-sm">
-              <Sparkles className="w-7 h-7" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Review & Plan Selection
-            </h2>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-              Step 1 (Personal Details), Step 2 (Company Details), and Step 3 (Identity Verification) have been completed successfully. Confirm and proceed to complete your company setup.
-            </p>
-            <div className="pt-3 flex flex-wrap justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  dispatch(setStep(3));
-                  if (typeof window !== 'undefined') {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('step', '3');
-                    window.history.pushState({}, '', url.toString());
-                  }
-                }}
-                className="py-2.5 px-4 rounded-xl border border-slate-300 hover:border-slate-400 text-slate-700 text-xs font-bold transition flex items-center gap-2 cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Return to Step 3 (Verify)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  dispatch(setStep(5));
-                  if (typeof window !== 'undefined') {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('step', '5');
-                    window.history.pushState({}, '', url.toString());
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }
-                }}
-                className="py-2.5 px-5 rounded-xl bg-futura-500 hover:bg-futura-600 active:bg-futura-700 text-white text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer"
-              >
-                <span>Confirm & Complete Setup (Step 5)</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          <OwnerStep4Review onOpenHelp={() => setIsHelpOpen(true)} />
         )}
-
-        {/* Step 5: Company Ready (FE-10) */}
         {currentStep === 5 && (
           <OwnerStep5CompanyReady onOpenHelp={() => setIsHelpOpen(true)} />
         )}
@@ -212,14 +160,16 @@ function OwnerOnboardingWizardContent() {
 
 export default function OwnerOnboardingWizardPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-futura-500" />
-        </div>
-      }
-    >
-      <OwnerOnboardingWizardContent />
-    </Suspense>
+    <GuestRoute redirectTo="/">
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-futura-500" />
+          </div>
+        }
+      >
+        <OwnerOnboardingWizardContent />
+      </Suspense>
+    </GuestRoute>
   );
 }
