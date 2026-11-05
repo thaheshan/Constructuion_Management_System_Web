@@ -146,6 +146,10 @@ export const RoleSelectionScreen: React.FC = () => {
 
   const handleContinue = () => {
     if (!canContinue) return;
+    if (selectedRole === 'OWNER') {
+      router.push('/register/owner?step=1');
+      return;
+    }
     const params = new URLSearchParams();
     if (selectedRole) params.set('role', selectedRole);
     if (selectedSubRole) params.set('subRole', selectedSubRole);
