@@ -16,78 +16,107 @@ import { OwnerStep3VerifyOtp } from '@/components/auth/owner-onboarding/OwnerSte
 import { OwnerStep4Review } from '@/components/auth/owner-onboarding/OwnerStep4Review';
 import { OwnerStep5CompanyReady } from '@/components/auth/owner-onboarding/OwnerStep5CompanyReady';
 import { TOTAL_STEPS } from '@/config/onboardingSteps';
+import {
+  loadValidDraft,
+  clearOnboardingDraft,
+  OwnerOnboardingDraft,
+} from '@/utils/draftStorage';
 import { RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+
+/**
+ * Clamps requested steps against the furthest reachable completed step.
+ * Non-numeric, zero or negative values fall back to step 1.
+ */
+function clampStep(rawStep: string | number | null | undefined, maxAllowed: number): number {
+  if (rawStep === null || rawStep === undefined) return 1;
+  const parsed = typeof rawStep === 'number' ? rawStep : parseInt(String(rawStep), 10);
+  if (isNaN(parsed) || parsed < 1) return 1;
+  return Math.min(parsed, maxAllowed);
+}
 
 function OwnerOnboardingWizardContent() {
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
-  const currentStep = useAppSelector((state) => state.ownerOnboarding.currentStep);
+  const { currentStep, furthestStepCompleted } = useAppSelector(
+    (state) => state.ownerOnboarding
+  );
 
   const [draftBannerVisible, setDraftBannerVisible] = useState(false);
-  const [savedDraftData, setSavedDraftData] = useState<any>(null);
+  const [savedDraftData, setSavedDraftData] = useState<OwnerOnboardingDraft | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+
+  // Maximum step index the user is allowed to navigate to based on actual completions
+  const maxAllowedStep = Math.min(TOTAL_STEPS, Math.max(1, furthestStepCompleted + 1));
 
   // Initialize step from URL on initial mount once
   const isInitialMount = useRef(true);
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      const stepParam = searchParams.get('step');
-      if (stepParam) {
-        const parsed = parseInt(stepParam, 10);
-        if (parsed >= 1 && parsed <= TOTAL_STEPS && parsed !== currentStep) {
-          dispatch(setStep(parsed));
-        }
+      const rawParam = searchParams.get('step');
+      const clampedTarget = clampStep(rawParam, maxAllowedStep);
+      if (clampedTarget > 1) {
+        dispatch(setStep(clampedTarget));
       }
     }
-  }, [searchParams, dispatch, currentStep]);
+  }, [searchParams, dispatch, maxAllowedStep]);
 
   // Handle browser back and forward button events smoothly
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
-      const step = parseInt(params.get('step') || '1', 10);
-      if (step >= 1 && step <= TOTAL_STEPS) {
-        dispatch(setStep(step));
+      const rawParam = params.get('step');
+      const targetStep = clampStep(rawParam, maxAllowedStep);
+      dispatch(setStep(targetStep));
+
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('step') !== String(targetStep)) {
+          url.searchParams.set('step', String(targetStep));
+          window.history.replaceState(null, '', url.toString());
+        }
       }
     };
+
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [dispatch]);
+  }, [dispatch, maxAllowedStep]);
 
   // Check for saved draft on initial mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const rawDraft = localStorage.getItem('futura_owner_onboarding_draft');
-        if (rawDraft) {
-          const parsed = JSON.parse(rawDraft);
-          if (parsed && (parsed.ownerDetails?.fullName || parsed.companyDetails?.companyName)) {
-            setSavedDraftData(parsed);
-            setDraftBannerVisible(true);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse draft from localStorage', e);
-      }
+    const draft = loadValidDraft();
+    if (draft) {
+      setSavedDraftData(draft);
+      setDraftBannerVisible(true);
     }
   }, []);
 
   const handleApplyDraft = () => {
     if (savedDraftData) {
-      dispatch(restoreDraft(savedDraftData));
+      dispatch(
+        restoreDraft({
+          currentStep: savedDraftData.currentStep,
+          furthestStepCompleted: savedDraftData.furthestStepCompleted ?? 1,
+          ownerDetails: savedDraftData.ownerDetails,
+          companyDetails: savedDraftData.companyDetails,
+        })
+      );
       setDraftBannerVisible(false);
+      setSavedDraftData(null);
     }
   };
 
   const handleDismissDraft = () => {
+    // Purge draft from storage when user dismisses banner to start fresh
+    clearOnboardingDraft();
     setDraftBannerVisible(false);
+    setSavedDraftData(null);
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
-      {/* Top Navbar */}
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans">
+      {/* Top Header */}
       <OwnerOnboardingHeader
         isHelpOpen={isHelpOpen}
         onOpenHelp={() => setIsHelpOpen(true)}
@@ -95,20 +124,20 @@ function OwnerOnboardingWizardContent() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 w-full mx-auto px-4 py-8 sm:py-10 max-w-2xl transition-all duration-150">
-        {/* Saved Draft Detected Banner */}
-        {draftBannerVisible && (
-          <div className="mb-5 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-sm flex items-center justify-between gap-4 animate-fadeIn">
+      <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 pt-6 pb-16">
+        {/* Unfinished Draft Resume Banner */}
+        {draftBannerVisible && savedDraftData && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4 animate-fadeIn shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
                 <RefreshCw className="w-4 h-4" />
               </div>
-              <div>
-                <p className="text-xs font-bold text-amber-950 uppercase tracking-wide">
-                  Saved Draft Found
+              <div className="text-left">
+                <p className="text-xs font-bold text-amber-900">
+                  You have an unfinished onboarding session
                 </p>
-                <p className="text-xs text-amber-800">
-                  You have an unfinished onboarding session. Would you like to resume?
+                <p className="text-[11px] text-amber-700">
+                  Resume from step {savedDraftData.currentStep} with your saved details.
                 </p>
               </div>
             </div>
@@ -118,9 +147,9 @@ function OwnerOnboardingWizardContent() {
                 variant="primary"
                 size="sm"
                 onClick={handleApplyDraft}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-1 rounded-xl"
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
               >
-                Restore
+                Resume
               </Button>
               <button
                 type="button"

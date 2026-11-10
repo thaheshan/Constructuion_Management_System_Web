@@ -3,7 +3,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { updateOwnerDetails } from '@/store/slices/ownerOnboardingSlice';
+import {
+  updateOwnerDetails,
+  completeStep,
+} from '@/store/slices/ownerOnboardingSlice';
 import { useStepNavigation } from '@/hooks/useStepNavigation';
 import {
   validateOwnerStep1,
@@ -59,6 +62,7 @@ export const OwnerStep1YourDetails: React.FC<OwnerStep1YourDetailsProps> = ({
     });
 
     if (Object.keys(validationErrors).length === 0) {
+      dispatch(completeStep(1));
       goToStep(2);
     }
   };

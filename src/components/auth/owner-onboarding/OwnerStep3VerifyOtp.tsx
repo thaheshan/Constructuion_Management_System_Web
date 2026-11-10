@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
+  completeStep,
   setVerificationCode,
   setVerificationChannel,
   decrementCountdown,
@@ -24,7 +25,6 @@ import {
   X,
   ArrowLeft,
   ArrowRight,
-  HelpCircle,
 } from 'lucide-react';
 
 interface OwnerStep3VerifyOtpProps {
@@ -32,7 +32,7 @@ interface OwnerStep3VerifyOtpProps {
 }
 
 export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
-  onOpenHelp,
+  onOpenHelp: _onOpenHelp,
 }) => {
   const dispatch = useAppDispatch();
   const { goToStep } = useStepNavigation();
@@ -105,6 +105,7 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
     dispatch(verifyOtp(fullCode));
 
     if (isCodeNumeric) {
+      dispatch(completeStep(3));
       // Direct navigation on successful verification without racing in useEffect
       goToStep(4);
     }

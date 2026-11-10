@@ -2,7 +2,10 @@
 
 import React, { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { saveDraftSuccess } from '@/store/slices/ownerOnboardingSlice';
+import {
+  completeStep,
+  saveDraftSuccess,
+} from '@/store/slices/ownerOnboardingSlice';
 import { useStepNavigation } from '@/hooks/useStepNavigation';
 import {
   validateOwnerStep2,
@@ -16,6 +19,7 @@ import { SaveDraftModal } from './SaveDraftModal';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft, ArrowRight, Bookmark, HelpCircle } from 'lucide-react';
 import { CompanyDetails } from '@/types/onboarding';
+import { saveOnboardingDraft } from '@/utils/draftStorage';
 
 interface OwnerStep2CompanyDetailsProps {
   onOpenHelp?: () => void;
@@ -75,38 +79,30 @@ export const OwnerStep2CompanyDetails: React.FC<OwnerStep2CompanyDetailsProps> =
     });
 
     if (Object.keys(validationErrors).length === 0) {
+      dispatch(completeStep(2));
       goToStep(3);
     }
   };
 
   const handleSaveDraft = () => {
-    if (typeof window !== 'undefined') {
-      try {
-        const draftPayload = {
-          ownerDetails: {
-            fullName: ownerDetails.fullName,
-            email: ownerDetails.email,
-            phonePrefix: ownerDetails.phonePrefix,
-            phone: ownerDetails.phone,
-            agreedToTerms: ownerDetails.agreedToTerms,
-          },
-          companyDetails,
-          currentStep: 2,
-          savedAt: new Date().toISOString(),
-        };
-        localStorage.setItem(
-          'futura_owner_onboarding_draft',
-          JSON.stringify(draftPayload)
-        );
-        dispatch(saveDraftSuccess());
-        setSavedTimestamp(
-          new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        );
-        setShowDraftModal(true);
-      } catch (err) {
-        console.error('Failed to save draft to localStorage', err);
-      }
-    }
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setSavedTimestamp(timestamp);
+
+    // Save strictly sanitized payload (without passwords/confirmPassword) to localStorage with timestamp & expiry
+    saveOnboardingDraft({
+      currentStep: 2,
+      furthestStepCompleted: 1,
+      ownerDetails: {
+        fullName: ownerDetails.fullName,
+        email: ownerDetails.email,
+        phonePrefix: ownerDetails.phonePrefix,
+        phone: ownerDetails.phone,
+        agreedToTerms: ownerDetails.agreedToTerms,
+      },
+      companyDetails,
+    });
+    dispatch(saveDraftSuccess());
+    setShowDraftModal(true);
   };
 
   return (
