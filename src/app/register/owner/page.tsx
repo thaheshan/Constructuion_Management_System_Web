@@ -7,17 +7,22 @@ import {
   setStep,
   restoreDraft,
 } from '@/store/slices/ownerOnboardingSlice';
+import { GuestRoute } from '@/components/common/GuestRoute';
 import { OwnerOnboardingHeader } from '@/components/auth/owner-onboarding/OwnerOnboardingHeader';
 import { OnboardingProgressBar } from '@/components/auth/owner-onboarding/OnboardingProgressBar';
 import { OwnerStep1YourDetails } from '@/components/auth/owner-onboarding/OwnerStep1YourDetails';
 import { OwnerStep2CompanyDetails } from '@/components/auth/owner-onboarding/OwnerStep2CompanyDetails';
 import { OwnerStep3VerifyOtp } from '@/components/auth/owner-onboarding/OwnerStep3VerifyOtp';
+import { OwnerStep4Review } from '@/components/auth/owner-onboarding/OwnerStep4Review';
+import { OwnerStep5CompanyReady } from '@/components/auth/owner-onboarding/OwnerStep5CompanyReady';
+import { TOTAL_STEPS } from '@/config/onboardingSteps';
 import {
   loadValidDraft,
   clearOnboardingDraft,
   OwnerOnboardingDraft,
 } from '@/utils/draftStorage';
-import { Sparkles, ArrowLeft, RefreshCw, X } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 /**
  * Clamps requested steps against the furthest reachable completed step.
@@ -42,23 +47,22 @@ function OwnerOnboardingWizardContent() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   // Maximum step index the user is allowed to navigate to based on actual completions
-  const maxAllowedStep = Math.min(5, Math.max(1, furthestStepCompleted + 1));
+  const maxAllowedStep = Math.min(TOTAL_STEPS, Math.max(1, furthestStepCompleted + 1));
 
-  // Guard flag to prevent URL-sync effect from running before initial param dispatch is applied
-  const isInitialized = useRef(false);
-
-  // 1. Dedicated one-time mount effect: initialize step from URL
+  // Initialize step from URL on initial mount once
+  const isInitialMount = useRef(true);
   useEffect(() => {
-    const rawParam = searchParams.get('step');
-    const clampedTarget = clampStep(rawParam, maxAllowedStep);
-    if (clampedTarget > 1) {
-      dispatch(setStep(clampedTarget));
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      const rawParam = searchParams.get('step');
+      const clampedTarget = clampStep(rawParam, maxAllowedStep);
+      if (clampedTarget > 1) {
+        dispatch(setStep(clampedTarget));
+      }
     }
-    isInitialized.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, dispatch, maxAllowedStep]);
 
-  // 2. Handle browser back / forward navigation cleanly with clamping
+  // Handle browser back and forward button events smoothly
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
@@ -66,7 +70,6 @@ function OwnerOnboardingWizardContent() {
       const targetStep = clampStep(rawParam, maxAllowedStep);
       dispatch(setStep(targetStep));
 
-      // Correct URL immediately if user attempted to jump beyond allowed step via forward history
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         if (url.searchParams.get('step') !== String(targetStep)) {
@@ -80,19 +83,7 @@ function OwnerOnboardingWizardContent() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [dispatch, maxAllowedStep]);
 
-  // 3. Keep browser URL in sync with Redux currentStep without flickering on first render
-  useEffect(() => {
-    if (!isInitialized.current) return;
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      if (url.searchParams.get('step') !== String(currentStep)) {
-        url.searchParams.set('step', String(currentStep));
-        window.history.replaceState(null, '', url.toString());
-      }
-    }
-  }, [currentStep]);
-
-  // 4. Check for validated, unexpired saved draft on mount
+  // Check for saved draft on initial mount
   useEffect(() => {
     const draft = loadValidDraft();
     if (draft) {
@@ -103,7 +94,14 @@ function OwnerOnboardingWizardContent() {
 
   const handleApplyDraft = () => {
     if (savedDraftData) {
-      dispatch(restoreDraft(savedDraftData));
+      dispatch(
+        restoreDraft({
+          currentStep: savedDraftData.currentStep,
+          furthestStepCompleted: savedDraftData.furthestStepCompleted ?? 1,
+          ownerDetails: savedDraftData.ownerDetails,
+          companyDetails: savedDraftData.companyDetails,
+        })
+      );
       setDraftBannerVisible(false);
       setSavedDraftData(null);
     }
@@ -117,8 +115,8 @@ function OwnerOnboardingWizardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
-      {/* Top Navbar */}
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans">
+      {/* Top Header */}
       <OwnerOnboardingHeader
         isHelpOpen={isHelpOpen}
         onOpenHelp={() => setIsHelpOpen(true)}
@@ -126,31 +124,33 @@ function OwnerOnboardingWizardContent() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 w-full mx-auto px-4 py-8 sm:py-10 max-w-2xl transition-all duration-150">
-        {/* Saved Draft Detected Banner */}
-        {draftBannerVisible && (
-          <div className="mb-5 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-sm flex items-center justify-between gap-4 animate-fadeIn">
+      <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 pt-6 pb-16">
+        {/* Unfinished Draft Resume Banner */}
+        {draftBannerVisible && savedDraftData && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4 animate-fadeIn shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
                 <RefreshCw className="w-4 h-4" />
               </div>
-              <div>
-                <p className="text-xs font-bold text-amber-950 uppercase tracking-wide">
-                  Saved Draft Found
+              <div className="text-left">
+                <p className="text-xs font-bold text-amber-900">
+                  You have an unfinished onboarding session
                 </p>
-                <p className="text-xs text-amber-800">
-                  You have an unfinished onboarding session. Would you like to resume?
+                <p className="text-[11px] text-amber-700">
+                  Resume from step {savedDraftData.currentStep} with your saved details.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="sm"
                 onClick={handleApplyDraft}
-                className="px-3 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-sm cursor-pointer"
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
               >
-                Restore
-              </button>
+                Resume
+              </Button>
               <button
                 type="button"
                 onClick={handleDismissDraft}
@@ -164,7 +164,7 @@ function OwnerOnboardingWizardContent() {
         )}
 
         {/* Horizontal Progress Bar */}
-        <OnboardingProgressBar currentStep={currentStep} totalSteps={5} />
+        <OnboardingProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} />
 
         {/* Step Views */}
         {currentStep === 1 && (
@@ -176,30 +176,11 @@ function OwnerOnboardingWizardContent() {
         {currentStep === 3 && (
           <OwnerStep3VerifyOtp onOpenHelp={() => setIsHelpOpen(true)} />
         )}
-
-        {/* Step 4 & 5 Placeholders for subsequent stories */}
-        {currentStep > 3 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-futura-50 border border-futura-100 flex items-center justify-center text-futura-600 mx-auto shadow-sm">
-              <Sparkles className="w-7 h-7" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900">
-              {currentStep === 4 ? 'Review & Plan Selection' : 'Setup Complete'}
-            </h2>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-              Remaining onboarding steps will be available in an upcoming release.
-            </p>
-            <div className="pt-3 flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => dispatch(setStep(3))}
-                className="py-2 px-4 rounded-xl border border-slate-300 hover:border-slate-400 text-slate-700 text-xs font-bold transition flex items-center gap-2 cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Return to Step 3 (Verify)</span>
-              </button>
-            </div>
-          </div>
+        {currentStep === 4 && (
+          <OwnerStep4Review onOpenHelp={() => setIsHelpOpen(true)} />
+        )}
+        {currentStep === 5 && (
+          <OwnerStep5CompanyReady onOpenHelp={() => setIsHelpOpen(true)} />
         )}
       </main>
     </div>
@@ -208,14 +189,16 @@ function OwnerOnboardingWizardContent() {
 
 export default function OwnerOnboardingWizardPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-futura-500" />
-        </div>
-      }
-    >
-      <OwnerOnboardingWizardContent />
-    </Suspense>
+    <GuestRoute redirectTo="/">
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-futura-500" />
+          </div>
+        }
+      >
+        <OwnerOnboardingWizardContent />
+      </Suspense>
+    </GuestRoute>
   );
 }
