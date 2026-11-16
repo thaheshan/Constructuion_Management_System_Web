@@ -8,6 +8,7 @@ import {
 
 export { calculatePasswordStrength };
 export type { PasswordStrengthLevel };
+export type StrengthLevel = PasswordStrengthLevel;
 
 interface PasswordStrengthMeterProps {
   password: string;
