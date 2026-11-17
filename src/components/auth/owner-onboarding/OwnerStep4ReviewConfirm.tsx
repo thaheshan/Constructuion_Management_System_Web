@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Briefcase,
@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  setStep,
-  completeStep,
   setShopId,
+  createCompanySuccess,
 } from "@/store/slices/ownerOnboardingSlice";
+import { useStepNavigation } from "@/hooks/useStepNavigation";
 import { clearOnboardingDraft } from "@/utils/draftStorage";
 
 interface OwnerStep4ReviewConfirmProps {
@@ -27,16 +27,23 @@ export const OwnerStep4ReviewConfirm: React.FC<
   OwnerStep4ReviewConfirmProps
 > = ({ onOpenHelp }) => {
   const dispatch = useAppDispatch();
-  const { ownerDetails, companyDetails, shopId } = useAppSelector(
-    (state) => state.ownerOnboarding,
-  );
+  const { goToStep } = useStepNavigation();
+  const { ownerDetails, companyDetails, shopId, isCompanyCreated } =
+    useAppSelector((state) => state.ownerOnboarding);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Format mobile phone with country code
+  // Lock wizard: if company is already created, automatically redirect to Step 5
+  useEffect(() => {
+    if (isCompanyCreated) {
+      goToStep(5);
+    }
+  }, [isCompanyCreated, goToStep]);
+
+  // Format mobile phone with country code (show "—" if not provided)
   const formatPhone = (prefix?: string, phoneNum?: string) => {
     if (!phoneNum || !phoneNum.trim()) {
-      return "+94 7X XXX 1234";
+      return "—";
     }
     const clean = phoneNum.replace(/\s+/g, "");
     const pfx = prefix || "+94";
@@ -46,7 +53,7 @@ export const OwnerStep4ReviewConfirm: React.FC<
     return `${pfx} ${clean}`;
   };
 
-  // Format full combined company address & district
+  // Format full combined company address & district (show "—" if not provided)
   const formatAddress = () => {
     const parts = [
       companyDetails.addressLine?.trim(),
@@ -57,12 +64,12 @@ export const OwnerStep4ReviewConfirm: React.FC<
     if (parts.length > 0) {
       return parts.join(", ");
     }
-    return "45/A High Level Rd, Colombo 05";
+    return "—";
   };
 
   // Format currency
   const formatCurrency = (curr?: string) => {
-    if (!curr || !curr.trim()) return "Sri Lankan Rupee (LKR)";
+    if (!curr || !curr.trim()) return "—";
     if (curr.includes("LKR") || curr.includes("Sri Lankan Rupee")) {
       return "Sri Lankan Rupee (LKR)";
     }
@@ -71,50 +78,26 @@ export const OwnerStep4ReviewConfirm: React.FC<
 
   // Format financial year start
   const formatFinancialYear = (fy?: string) => {
-    if (!fy || !fy.trim()) return "1st April";
+    if (!fy || !fy.trim()) return "—";
     if (fy === "1 April" || fy === "1st April") return "1st April";
     return fy;
   };
 
-  // Format VAT number
-  const formatVatNumber = () => {
-    if (companyDetails.isVatRegistered) {
-      if (companyDetails.vatTinNumber?.trim()) {
-        const raw = companyDetails.vatTinNumber.trim();
-        return raw.toUpperCase().startsWith("VAT-")
-          ? raw
-          : `VAT-${raw.replace(/^TIN-?/i, "")}`;
-      }
-      return "VAT-11223344";
-    }
-    return companyDetails.vatTinNumber?.trim()
-      ? companyDetails.vatTinNumber
-      : "VAT-11223344";
-  };
-
   // Navigation handlers
   const handleEditOwnerAccount = () => {
-    dispatch(setStep(1));
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    goToStep(1);
   };
 
   const handleEditCompanyDetails = () => {
-    dispatch(setStep(2));
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    goToStep(2);
   };
 
   const handleBack = () => {
-    dispatch(setStep(3));
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    goToStep(3);
   };
 
   const handleCreateCompany = async () => {
+    if (isSubmitting || isCompanyCreated) return;
     setIsSubmitting(true);
     try {
       // Simulate company creation / provisioning call
@@ -129,12 +112,9 @@ export const OwnerStep4ReviewConfirm: React.FC<
       // Purge onboarding draft from localStorage upon successful company creation
       clearOnboardingDraft();
 
-      // Complete Step 4 and advance to Step 5 (Company Ready)
-      dispatch(completeStep(4));
-      dispatch(setStep(5));
-      if (typeof window !== "undefined") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      // Lock creation and advance to Step 5 (Company Ready)
+      dispatch(createCompanySuccess());
+      goToStep(5);
     } finally {
       setIsSubmitting(false);
     }
@@ -178,7 +158,7 @@ export const OwnerStep4ReviewConfirm: React.FC<
               FULL NAME
             </span>
             <span className="block text-sm font-semibold text-[#1B2430]">
-              {ownerDetails.fullName?.trim() || "John Alexander Perera"}
+              {ownerDetails.fullName?.trim() || "—"}
             </span>
           </div>
 
@@ -198,7 +178,7 @@ export const OwnerStep4ReviewConfirm: React.FC<
               EMAIL
             </span>
             <span className="block text-sm font-medium text-slate-800 break-all">
-              {ownerDetails.email?.trim() || "j.perera@futuraconst.com"}
+              {ownerDetails.email?.trim() || "—"}
             </span>
           </div>
 
@@ -240,8 +220,7 @@ export const OwnerStep4ReviewConfirm: React.FC<
               COMPANY NAME
             </span>
             <span className="block text-sm font-semibold text-[#1B2430]">
-              {companyDetails.companyName?.trim() ||
-                "Futura Constructions (Pvt) Ltd"}
+              {companyDetails.companyName?.trim() || "—"}
             </span>
           </div>
 
@@ -252,8 +231,7 @@ export const OwnerStep4ReviewConfirm: React.FC<
                 BUSINESS TYPE
               </span>
               <span className="block text-sm font-medium text-slate-800">
-                {companyDetails.businessType?.trim() ||
-                  "Civil Engineering & Contracting"}
+                {companyDetails.businessType?.trim() || "—"}
               </span>
             </div>
 
@@ -273,7 +251,9 @@ export const OwnerStep4ReviewConfirm: React.FC<
                 TAX IDENTIFICATION (TIN)
               </span>
               <span className="block text-sm font-medium font-mono text-slate-800">
-                {companyDetails.vatTinNumber?.trim() || "TIN-992834-001"}
+                {companyDetails.tinNumber?.trim() ||
+                  companyDetails.vatTinNumber?.trim() ||
+                  "—"}
               </span>
             </div>
 
@@ -283,7 +263,9 @@ export const OwnerStep4ReviewConfirm: React.FC<
                 VAT NUMBER
               </span>
               <span className="block text-sm font-medium font-mono text-slate-800">
-                {formatVatNumber()}
+                {companyDetails.isVatRegistered
+                  ? companyDetails.vatNumber?.trim() || "Not provided"
+                  : "Not Registered"}
               </span>
             </div>
 
@@ -356,7 +338,7 @@ export const OwnerStep4ReviewConfirm: React.FC<
         <button
           type="button"
           onClick={handleCreateCompany}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isCompanyCreated}
           className="w-full py-3.5 sm:py-4 px-6 rounded-xl bg-[#F5851F] hover:bg-[#E07516] active:bg-[#C96510] text-[#1B2430] font-bold text-base transition shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
         >
           {isSubmitting ? (
@@ -376,7 +358,7 @@ export const OwnerStep4ReviewConfirm: React.FC<
         <button
           type="button"
           onClick={handleBack}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isCompanyCreated}
           className="w-full py-3 sm:py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-bold text-sm sm:text-base transition cursor-pointer disabled:opacity-60"
         >
           Back
