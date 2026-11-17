@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  setStep,
   completeStep,
   setVerificationCode,
   setVerificationChannel,
@@ -12,16 +11,20 @@ import {
   verifyOtp,
   updateOwnerDetails,
 } from '@/store/slices/ownerOnboardingSlice';
+import { useStepNavigation } from '@/hooks/useStepNavigation';
+import { isValidEmail, isValidSriLankaMobile } from '@/utils/validators';
 import { OtpInputGrid } from './OtpInputGrid';
+import { Button } from '@/components/ui/Button';
 import {
   Shield,
   Mail,
   Smartphone,
   AlertCircle,
   Lock,
-  CheckCircle2,
   Edit2,
   X,
+  ArrowLeft,
+  ArrowRight,
 } from 'lucide-react';
 
 interface OwnerStep3VerifyOtpProps {
@@ -29,9 +32,10 @@ interface OwnerStep3VerifyOtpProps {
 }
 
 export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
-  onOpenHelp,
+  onOpenHelp: _onOpenHelp,
 }) => {
   const dispatch = useAppDispatch();
+  const { goToStep } = useStepNavigation();
   const { ownerDetails, verification } = useAppSelector(
     (state) => state.ownerOnboarding
   );
@@ -40,22 +44,19 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
     code,
     channel,
     resendCountdown,
-    isVerified,
     attemptsRemaining,
     lockedUntil,
     error,
   } = verification;
 
-  // Local state for "Use different number or email" dialog
+  // Local state for "Use different number or email" modal
   const [showEditContactModal, setShowEditContactModal] = useState(false);
   const [tempPhone, setTempPhone] = useState(ownerDetails.phone || '');
   const [tempEmail, setTempEmail] = useState(ownerDetails.email || '');
   const [editError, setEditError] = useState<string | null>(null);
 
   // Success message after resend
-  const [resendNotification, setResendNotification] = useState<string | null>(
-    null
-  );
+  const [resendNotification, setResendNotification] = useState<string | null>(null);
 
   // Timer countdown hook
   useEffect(() => {
@@ -93,15 +94,21 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
 
   const fullCode = code.join('');
   const isCodeComplete = fullCode.length === 6;
-
-  // Check if locked out
   const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
 
   const handleVerify = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!isCodeComplete || isLocked) return;
 
+    // Check if 6-digit numeric
+    const isCodeNumeric = /^[0-9]{6}$/.test(fullCode);
     dispatch(verifyOtp(fullCode));
+
+    if (isCodeNumeric) {
+      dispatch(completeStep(3));
+      // Direct navigation on successful verification without racing in useEffect
+      goToStep(4);
+    }
   };
 
   const handleResend = () => {
@@ -118,18 +125,22 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
   const handleSwitchChannel = () => {
     const nextChannel = channel === 'SMS' ? 'EMAIL' : 'SMS';
     dispatch(setVerificationChannel(nextChannel));
-    setResendNotification(`Verification code sent to your ${nextChannel === 'SMS' ? 'mobile number' : 'email address'}.`);
+    setResendNotification(
+      `Verification code sent to your ${
+        nextChannel === 'SMS' ? 'mobile number' : 'email address'
+      }.`
+    );
     setTimeout(() => setResendNotification(null), 5000);
   };
 
   const handleSaveContact = () => {
     setEditError(null);
     const cleanP = tempPhone.replace(/\s+/g, '');
-    if (!cleanP || !/^7[0-9]{8}$/.test(cleanP)) {
+    if (!cleanP || !isValidSriLankaMobile(cleanP)) {
       setEditError('Enter a valid 9-digit mobile number (e.g. 77 123 4567)');
       return;
     }
-    if (!tempEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tempEmail)) {
+    if (!tempEmail || !isValidEmail(tempEmail)) {
       setEditError('Enter a valid email address');
       return;
     }
@@ -143,203 +154,210 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
     setShowEditContactModal(false);
     dispatch(resetCountdown(59));
     dispatch(setVerificationCode(['', '', '', '', '', '']));
-    setResendNotification('Contact updated. A new verification code has been dispatched.');
+    setResendNotification(
+      'Contact updated. A new verification code has been dispatched.'
+    );
     setTimeout(() => setResendNotification(null), 5000);
-  };
-
-  const handleBack = () => {
-    dispatch(setStep(2));
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleNextStep = useCallback(() => {
-    // When verification succeeds, complete Step 3 and move to Review / Step 4
-    dispatch(completeStep(3));
-    dispatch(setStep(4));
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (isVerified) {
-      handleNextStep();
-    }
-  }, [isVerified, handleNextStep]);
-
-  const formatTimer = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
     <div className="w-full">
-      {/* ── Main Form Card ── */}
       <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200/90 p-7 sm:p-9 text-center">
-        {/* ── Top Icon Badge ── */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-14 h-14 rounded-full bg-blue-50/80 text-blue-600 flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-7 h-7 text-blue-600" />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Verify your account
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-md leading-relaxed mx-auto">
-            We sent a 6-digit code to{' '}
-            <span className="font-bold text-slate-800">{currentDestinationText}</span>. Enter it below to secure your identity.
-          </p>
+        {/* ── Shield Icon Badge ── */}
+        <div className="w-14 h-14 rounded-2xl bg-[#e8f0fe] border border-[#d2e3fc] flex items-center justify-center text-[#1a73e8] mx-auto mb-5 shadow-sm">
+          <Shield className="w-7 h-7" />
         </div>
 
-        {/* ── Resend Notification Toast ── */}
+        {/* ── Title & Destination ── */}
+        <span className="text-[11px] font-bold text-futura-600 tracking-wider uppercase mb-1 block">
+          Step 3 of 5
+        </span>
+        <h1 className="text-2xl sm:text-[26px] font-extrabold text-slate-900 tracking-tight">
+          Verify your identity
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-md mx-auto leading-relaxed">
+          We&apos;ve sent a 6-digit confirmation code to{' '}
+          <span className="font-semibold text-slate-800">{currentDestinationText}</span>.
+        </p>
+
+        {/* Resend notification toast */}
         {resendNotification && (
-          <div className="mb-5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center justify-center gap-2 animate-fadeIn">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>{resendNotification}</span>
+          <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-medium animate-fadeIn">
+            {resendNotification}
           </div>
         )}
 
-        <form onSubmit={handleVerify} className="space-y-6">
-          {/* ── 6-Digit OTP Box Grid ── */}
-          <div>
-            <OtpInputGrid
-              value={code}
-              onChange={(digits) => dispatch(setVerificationCode(digits))}
-              hasError={Boolean(error)}
-              disabled={isLocked}
-            />
-
-            {/* Error Message */}
-            {error && (
-              <div className="mt-3 text-center flex items-center justify-center gap-1.5 text-xs text-red-600 font-semibold animate-shake">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+        {/* Lockout alert */}
+        {isLocked && (
+          <div className="mt-4 p-3.5 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-center gap-2.5 text-left animate-fadeIn">
+            <Lock className="w-4 h-4 text-red-600 flex-shrink-0" />
+            <span>
+              Too many invalid attempts. Verification is locked. Please try again in a few minutes.
+            </span>
           </div>
+        )}
 
-          {/* ── Resend Timer Section ── */}
-          <div className="text-center">
+        {/* ── 6-Box OTP Input Grid ── */}
+        <div className="mt-6 mb-4">
+          <OtpInputGrid
+            value={code}
+            onChange={(newDigits) => dispatch(setVerificationCode(newDigits))}
+            hasError={!!error}
+            disabled={isLocked}
+          />
+
+          {error && (
+            <p className="mt-2 text-xs text-red-600 font-medium flex items-center justify-center gap-1.5 animate-fadeIn">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{error}</span>
+            </p>
+          )}
+
+          {!error && !isLocked && attemptsRemaining < 5 && (
+            <p className="mt-2 text-xs text-amber-600 font-medium">
+              {attemptsRemaining} verification attempt(s) remaining before temporary lockout.
+            </p>
+          )}
+        </div>
+
+        {/* ── Resend Countdown & Channel Switcher ── */}
+        <div className="space-y-3 pt-2 text-xs">
+          <div className="text-slate-500">
+            Didn&apos;t receive the code?{' '}
             {resendCountdown > 0 ? (
-              <p className="text-xs text-slate-500">
-                Didn&apos;t receive a code?{' '}
-                <span className="text-slate-400 font-medium">
-                  Resend code in {formatTimer(resendCountdown)}
+              <span className="font-semibold text-slate-700">
+                Resend in{' '}
+                <span className="text-futura-600 font-mono font-bold">
+                  00:{resendCountdown < 10 ? `0${resendCountdown}` : resendCountdown}
                 </span>
-              </p>
+              </span>
             ) : (
-              <p className="text-xs text-slate-500">
-                Didn&apos;t receive a code?{' '}
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={isLocked}
-                  className="font-semibold text-blue-600 hover:underline focus:outline-none cursor-pointer"
-                >
-                  Resend code
-                </button>
-              </p>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={isLocked}
+                className="font-bold text-futura-600 hover:text-futura-700 underline cursor-pointer disabled:opacity-50"
+              >
+                Resend Code
+              </button>
             )}
           </div>
 
-          {/* ── Alternative Channels Box ── */}
-          <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-4 text-left space-y-2.5">
+          <div className="flex items-center justify-center gap-4 text-slate-400">
+            <button
+              type="button"
+              onClick={handleSwitchChannel}
+              disabled={isLocked}
+              className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 transition font-medium cursor-pointer"
+            >
+              {channel === 'SMS' ? (
+                <>
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Send via Email instead</span>
+                </>
+              ) : (
+                <>
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>Send via SMS instead</span>
+                </>
+              )}
+            </button>
+            <span>•</span>
             <button
               type="button"
               onClick={() => {
                 setTempPhone(ownerDetails.phone || '');
                 setTempEmail(ownerDetails.email || '');
+                setEditError(null);
                 setShowEditContactModal(true);
               }}
-              className="flex items-center gap-2 text-xs sm:text-sm font-medium text-blue-600 hover:underline cursor-pointer group text-left"
+              className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-900 transition font-medium cursor-pointer"
             >
-              <Edit2 className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-              <span>Use a different number or email</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSwitchChannel}
-              className="flex items-center gap-2 text-xs sm:text-sm font-medium text-blue-600 hover:underline cursor-pointer group text-left"
-            >
-              {channel === 'SMS' ? (
-                <Mail className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-              ) : (
-                <Smartphone className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-              )}
-              <span>
-                {channel === 'SMS'
-                  ? 'Send code to my email instead'
-                  : 'Send code via SMS instead'}
-              </span>
+              <Edit2 className="w-3 h-3" />
+              <span>Edit number or email</span>
             </button>
           </div>
+        </div>
 
-          {/* ── Action Buttons ── */}
-          <div className="pt-2 space-y-3">
-            <button
-              type="submit"
-              disabled={!isCodeComplete || isLocked}
-              className="w-full py-3.5 px-6 rounded-xl bg-futura-500 hover:bg-futura-600 active:bg-futura-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base tracking-wide shadow-md shadow-futura-500/20 transition cursor-pointer"
-            >
-              <span>Verify and continue</span>
-            </button>
+        {/* ── Submit / Verify Button ── */}
+        <div className="pt-8 space-y-3">
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            onClick={() => handleVerify()}
+            disabled={!isCodeComplete || isLocked}
+            className="w-full bg-futura-500 hover:bg-futura-600 active:bg-futura-700 disabled:opacity-50 text-white font-bold py-3.5 shadow-md flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>Verify and Continue</span>
+            <ArrowRight className="w-4 h-4" />
+          </Button>
 
-            <button
-              type="button"
-              onClick={handleBack}
-              className="w-full py-2.5 px-5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-slate-700 font-medium text-xs sm:text-sm transition text-center cursor-pointer"
-            >
-              Back
-            </button>
-          </div>
-        </form>
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={() => goToStep(2)}
+            className="w-full text-slate-600 flex items-center justify-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Company Details</span>
+          </Button>
+        </div>
       </div>
 
-      {/* ── Below Card: End-to-End Encrypted Verification Note ── */}
-      <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] font-bold tracking-wider uppercase text-slate-400 select-none">
-        <Lock className="w-3.5 h-3.5 text-slate-400" />
-        <span>END-TO-END ENCRYPTED VERIFICATION</span>
+      {/* Security Note Footer */}
+      <div className="mt-6 text-center">
+        <p className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
+          <Shield className="w-3.5 h-3.5 text-slate-400" />
+          <span>END-TO-END ENCRYPTED VERIFICATION PROTOCOL</span>
+        </p>
       </div>
 
       {/* ── Edit Contact Modal ── */}
       {showEditContactModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 relative">
-            <button
-              type="button"
-              onClick={() => setShowEditContactModal(false)}
-              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-600 transition"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 text-left space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">
+                Update Verification Contact
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowEditContactModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-            <h3 className="text-lg font-bold text-slate-900 mb-2">
-              Update Contact Destination
-            </h3>
-            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-              Change the phone number or email where your verification code will be sent.
-            </p>
+            {editError && (
+              <p className="text-xs text-red-600 font-medium bg-red-50 p-2.5 rounded-lg border border-red-200">
+                {editError}
+              </p>
+            )}
 
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Mobile Number (+94)
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Mobile Number (Sri Lanka)
                 </label>
-                <input
-                  type="tel"
-                  value={tempPhone}
-                  onChange={(e) => setTempPhone(e.target.value)}
-                  placeholder="77 123 4567"
-                  className="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-300 focus:outline-none focus:ring-2 focus:ring-futura-500"
-                />
+                <div className="flex items-center rounded-lg border border-slate-300 bg-white overflow-hidden shadow-sm">
+                  <span className="px-3 py-2 text-xs font-bold text-slate-500 bg-slate-50 border-r border-slate-200">
+                    +94
+                  </span>
+                  <input
+                    type="tel"
+                    value={tempPhone}
+                    onChange={(e) => setTempPhone(e.target.value)}
+                    placeholder="77 123 4567"
+                    className="w-full px-3 py-2 text-sm text-slate-900 focus:outline-none"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Email Address
                 </label>
                 <input
@@ -347,49 +365,33 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
                   value={tempEmail}
                   onChange={(e) => setTempEmail(e.target.value)}
                   placeholder="owner@company.lk"
-                  className="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-300 focus:outline-none focus:ring-2 focus:ring-futura-500"
+                  className="w-full px-3 py-2 text-sm text-slate-900 rounded-lg border border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-futura-500/20 focus:border-futura-500"
                 />
               </div>
-
-              {editError && (
-                <p className="text-xs text-red-600 font-medium flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>{editError}</span>
-                </p>
-              )}
             </div>
 
-            <div className="flex gap-2">
-              <button
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => setShowEditContactModal(false)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-bold hover:bg-slate-50 transition"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="primary"
+                size="sm"
                 onClick={handleSaveContact}
-                className="flex-1 py-2.5 rounded-xl bg-futura-500 hover:bg-futura-600 text-white text-sm font-bold shadow-md shadow-futura-500/20 transition"
+                className="bg-futura-500 hover:bg-futura-600 text-white"
               >
-                Save &amp; Resend
-              </button>
+                Update and Resend
+              </Button>
             </div>
           </div>
         </div>
       )}
-
-      {/* ── Centered Contact Support below the card ── */}
-      <div className="mt-6 text-center text-xs sm:text-sm text-slate-500">
-        <span>Need help with registration? </span>
-        <button
-          type="button"
-          onClick={onOpenHelp}
-          className="text-blue-600 font-semibold hover:underline cursor-pointer focus:outline-none"
-        >
-          Contact Support
-        </button>
-      </div>
     </div>
   );
 };

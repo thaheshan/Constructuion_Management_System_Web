@@ -80,7 +80,7 @@ export interface OwnerOnboardingState {
   ownerDetails: OwnerDetails;
   companyDetails: CompanyDetails;
   verification: VerificationState;
-  shopId?: string;
+  shopId: string;
   isDraftSaved: boolean;
   lastSavedAt: string | null;
 }

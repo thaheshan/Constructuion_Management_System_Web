@@ -17,19 +17,19 @@ export const OtpInputGrid: React.FC<OtpInputGridProps> = ({
 }) => {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Auto-focus first input on mount if empty
+  // Focus first input ONLY once on initial mount
   useEffect(() => {
-    if (!disabled && inputRefs.current[0] && value.every((d) => !d)) {
+    if (!disabled && inputRefs.current[0]) {
       inputRefs.current[0].focus();
     }
-  }, [disabled, value]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
 
     if (e.key === 'Backspace') {
       if (!value[index] && index > 0) {
-        // Move back to previous and clear it
+        // Move back to previous box and clear it
         const nextDigits = [...value];
         nextDigits[index - 1] = '';
         onChange(nextDigits);
@@ -50,14 +50,13 @@ export const OtpInputGrid: React.FC<OtpInputGridProps> = ({
     if (disabled) return;
 
     const val = e.target.value;
-    // Extract only digits
     const cleanDigit = val.replace(/\D/g, '').slice(-1);
 
     const nextDigits = [...value];
     nextDigits[index] = cleanDigit;
     onChange(nextDigits);
 
-    // Auto advance if digit entered
+    // Auto-advance to next box if digit was typed
     if (cleanDigit && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -76,13 +75,16 @@ export const OtpInputGrid: React.FC<OtpInputGridProps> = ({
     }
     onChange(nextDigits);
 
-    // Focus on next box or last box
     const nextIndex = Math.min(pastedData.length, 5);
     inputRefs.current[nextIndex]?.focus();
   };
 
   return (
-    <div className="flex items-center justify-center gap-2 sm:gap-3 py-2">
+    <div
+      role="group"
+      aria-label="Verification code"
+      className="flex items-center justify-center gap-2 sm:gap-3 py-2"
+    >
       {[0, 1, 2, 3, 4, 5].map((index) => (
         <input
           key={index}
@@ -93,13 +95,14 @@ export const OtpInputGrid: React.FC<OtpInputGridProps> = ({
           inputMode="numeric"
           pattern="[0-9]*"
           maxLength={1}
+          autoComplete={index === 0 ? 'one-time-code' : 'off'}
           value={value[index] || ''}
           onChange={(e) => handleChange(index, e)}
           onKeyDown={(e) => handleKeyDown(index, e)}
           onPaste={handlePaste}
           disabled={disabled}
-          aria-label={`Digit ${index + 1}`}
-          className={`w-11 h-13 sm:w-13 sm:h-16 text-center text-xl sm:text-2xl font-bold rounded-xl border transition-all duration-150 focus:outline-none ${
+          aria-label={`Digit ${index + 1} of 6`}
+          className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold rounded-xl border transition-all duration-150 focus:outline-none ${
             hasError
               ? 'border-red-400 bg-red-50/30 text-red-900 focus:ring-2 focus:ring-red-400'
               : 'border-slate-300 bg-white text-slate-900 focus:border-futura-500 focus:ring-2 focus:ring-futura-500/20 shadow-sm'
