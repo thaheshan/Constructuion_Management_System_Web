@@ -30,9 +30,9 @@ export const ONBOARDING_STEPS: OnboardingStepConfig[] = [
   },
   {
     id: 4,
-    key: 'plan-selection',
-    title: 'PLAN SELECTION',
-    headerTitle: 'Review & Plan',
+    key: 'review-confirm',
+    title: 'REVIEW',
+    headerTitle: 'Review and Confirm',
     shortTitle: 'Review',
   },
   {

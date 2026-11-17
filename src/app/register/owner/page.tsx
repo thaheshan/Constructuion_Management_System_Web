@@ -13,7 +13,7 @@ import { OnboardingProgressBar } from '@/components/auth/owner-onboarding/Onboar
 import { OwnerStep1YourDetails } from '@/components/auth/owner-onboarding/OwnerStep1YourDetails';
 import { OwnerStep2CompanyDetails } from '@/components/auth/owner-onboarding/OwnerStep2CompanyDetails';
 import { OwnerStep3VerifyOtp } from '@/components/auth/owner-onboarding/OwnerStep3VerifyOtp';
-import { OwnerStep4Review } from '@/components/auth/owner-onboarding/OwnerStep4Review';
+import { OwnerStep4ReviewConfirm } from '@/components/auth/owner-onboarding/OwnerStep4ReviewConfirm';
 import { OwnerStep5CompanyReady } from '@/components/auth/owner-onboarding/OwnerStep5CompanyReady';
 import { TOTAL_STEPS } from '@/config/onboardingSteps';
 import {
@@ -26,9 +26,15 @@ import { Button } from '@/components/ui/Button';
 
 /**
  * Clamps requested steps against the furthest reachable completed step.
+ * Once company is created, wizard locks strictly to Step 5.
  * Non-numeric, zero or negative values fall back to step 1.
  */
-function clampStep(rawStep: string | number | null | undefined, maxAllowed: number): number {
+function clampStep(
+  rawStep: string | number | null | undefined,
+  maxAllowed: number,
+  isCompanyCreated = false
+): number {
+  if (isCompanyCreated) return 5;
   if (rawStep === null || rawStep === undefined) return 1;
   const parsed = typeof rawStep === 'number' ? rawStep : parseInt(String(rawStep), 10);
   if (isNaN(parsed) || parsed < 1) return 1;
@@ -38,7 +44,7 @@ function clampStep(rawStep: string | number | null | undefined, maxAllowed: numb
 function OwnerOnboardingWizardContent() {
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
-  const { currentStep, furthestStepCompleted } = useAppSelector(
+  const { currentStep, furthestStepCompleted, isCompanyCreated } = useAppSelector(
     (state) => state.ownerOnboarding
   );
 
@@ -47,7 +53,21 @@ function OwnerOnboardingWizardContent() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   // Maximum step index the user is allowed to navigate to based on actual completions
-  const maxAllowedStep = Math.min(TOTAL_STEPS, Math.max(1, furthestStepCompleted + 1));
+  const maxAllowedStep = isCompanyCreated
+    ? 5
+    : Math.min(TOTAL_STEPS, Math.max(1, furthestStepCompleted + 1));
+
+  // Lock wizard: if company is already created, lock navigation strictly to Step 5
+  useEffect(() => {
+    if (isCompanyCreated && currentStep !== 5) {
+      dispatch(setStep(5));
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('step', '5');
+        window.history.replaceState(null, '', url.toString());
+      }
+    }
+  }, [isCompanyCreated, currentStep, dispatch]);
 
   // Initialize step from URL on initial mount once
   const isInitialMount = useRef(true);
@@ -55,19 +75,19 @@ function OwnerOnboardingWizardContent() {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       const rawParam = searchParams.get('step');
-      const clampedTarget = clampStep(rawParam, maxAllowedStep);
+      const clampedTarget = clampStep(rawParam, maxAllowedStep, isCompanyCreated);
       if (clampedTarget > 1) {
         dispatch(setStep(clampedTarget));
       }
     }
-  }, [searchParams, dispatch, maxAllowedStep]);
+  }, [searchParams, dispatch, maxAllowedStep, isCompanyCreated]);
 
   // Handle browser back and forward button events smoothly
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const rawParam = params.get('step');
-      const targetStep = clampStep(rawParam, maxAllowedStep);
+      const targetStep = clampStep(rawParam, maxAllowedStep, isCompanyCreated);
       dispatch(setStep(targetStep));
 
       if (typeof window !== 'undefined') {
@@ -81,7 +101,7 @@ function OwnerOnboardingWizardContent() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [dispatch, maxAllowedStep]);
+  }, [dispatch, maxAllowedStep, isCompanyCreated]);
 
   // Check for saved draft on initial mount
   useEffect(() => {
@@ -126,7 +146,7 @@ function OwnerOnboardingWizardContent() {
       {/* Main Container */}
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 pt-6 pb-16">
         {/* Unfinished Draft Resume Banner */}
-        {draftBannerVisible && savedDraftData && (
+        {draftBannerVisible && savedDraftData && !isCompanyCreated && (
           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4 animate-fadeIn shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
@@ -177,7 +197,7 @@ function OwnerOnboardingWizardContent() {
           <OwnerStep3VerifyOtp onOpenHelp={() => setIsHelpOpen(true)} />
         )}
         {currentStep === 4 && (
-          <OwnerStep4Review onOpenHelp={() => setIsHelpOpen(true)} />
+          <OwnerStep4ReviewConfirm onOpenHelp={() => setIsHelpOpen(true)} />
         )}
         {currentStep === 5 && (
           <OwnerStep5CompanyReady onOpenHelp={() => setIsHelpOpen(true)} />
