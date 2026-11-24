@@ -28,6 +28,8 @@ const initialCompanyDetails: CompanyDetails = {
   city: '',
   district: 'Colombo',
   vatTinNumber: '',
+  tinNumber: '',
+  vatNumber: '',
   epfEmployerNo: '',
   etfEmployerNo: '',
   isVatRegistered: false,

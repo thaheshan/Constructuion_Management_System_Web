@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Mail, CheckCircle2, AlertCircle, RefreshCw, KeyRound } from 'lucide-react';
+import { authService } from '@/services/authService';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -30,10 +31,18 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     setError(null);
     setIsLoading(true);
 
-    // Simulate recovery email dispatch
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsLoading(false);
-    setIsSuccess(true);
+    try {
+      await authService.forgotPassword({ identifier: identifier.trim() });
+      setIsSuccess(true);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Could not send reset instructions. Please check your details and try again.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleReset = () => {

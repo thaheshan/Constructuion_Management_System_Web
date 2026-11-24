@@ -12,7 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { loginStart, loginSuccess, loginFailure, clearError } from '@/store/slices/authSlice';
-import { UserRole } from '@/types/auth';
+import { authService } from '@/services/authService';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
@@ -64,63 +64,25 @@ export const LoginForm: React.FC<LoginFormProps> = ({ redirectPath: defaultRedir
     const targetRedirect = searchParams.get('redirect') || defaultRedirect;
 
     try {
-      if (!isMockAuthAllowed) {
-        // In real production bundle without mock flag, reject simulated auth
-        dispatch(
-          loginFailure(
-            'Production API endpoint is required. Simulated authentication is disabled.'
-          )
-        );
-        return;
-      }
-
-      // Simulated auth network latency for realistic UX
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      if (email.toLowerCase().startsWith('fail') || password === 'wrongpassword') {
-        dispatch(loginFailure('Invalid credentials. Please check your email and password.'));
-        return;
-      }
-
-      // Strict role resolution - Principle of Least Privilege: default to STAFF (lowest role)
-      const username = email.split('@')[0].toLowerCase();
-      let assignedRole: UserRole = 'STAFF';
-
-      if (username === 'owner' || username.startsWith('owner.')) {
-        assignedRole = 'OWNER';
-      } else if (username === 'pm' || username.startsWith('pm.')) {
-        assignedRole = 'PROJECT_MANAGER';
-      } else if (username === 'supervisor' || username.startsWith('supervisor.')) {
-        assignedRole = 'SITE_SUPERVISOR';
-      } else if (username === 'accountant' || username.startsWith('accountant.')) {
-        assignedRole = 'ACCOUNTANT';
-      } else if (username === 'store' || username.startsWith('store.')) {
-        assignedRole = 'STORE_KEEPER';
-      } else if (username === 'labour' || username.startsWith('labour.')) {
-        assignedRole = 'LABOUR_OFFICER';
-      }
-
-      const formattedName = username
-        .replace('.', ' ')
-        .split(' ')
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
+      const response = await authService.login({
+        identifier: email.trim(),
+        password,
+      });
 
       dispatch(
         loginSuccess({
-          user: {
-            id: 'cms_usr_101',
-            email,
-            fullName: formattedName,
-            role: assignedRole,
-          },
-          token: 'cms_jwt_mock_token_' + Date.now(),
+          user: response.user,
+          token: response.token || '',
         })
       );
 
       router.push(targetRedirect);
-    } catch {
-      dispatch(loginFailure('An unexpected error occurred during login. Please try again.'));
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Invalid credentials or server error. Please try again.';
+      dispatch(loginFailure(message));
     }
   };
 

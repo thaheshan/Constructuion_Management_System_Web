@@ -51,6 +51,8 @@ export interface CompanyDetails {
   district: SriLankanDistrict | '';
   // Tax and Statutory
   vatTinNumber?: string;
+  tinNumber?: string;
+  vatNumber?: string;
   epfEmployerNo?: string;
   etfEmployerNo?: string;
   isVatRegistered: boolean;

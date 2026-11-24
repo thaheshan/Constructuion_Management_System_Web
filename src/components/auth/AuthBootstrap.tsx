@@ -33,13 +33,25 @@ export function AuthBootstrap({ children }: AuthBootstrapProps) {
     const controller = new AbortController();
     activeControllerRef.current = controller;
     const sessionUrl =
-      process.env.NEXT_PUBLIC_AUTH_SESSION_URL || '/api/v1/auth/session';
+      process.env.NEXT_PUBLIC_AUTH_SESSION_URL ||
+      (process.env.NEXT_PUBLIC_API_URL
+        ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')}/auth/session`
+        : '/api/v1/auth/session');
 
     const checkSession = async () => {
       dispatch(sessionCheckStart());
 
       try {
+        const headers = new Headers();
+        if (typeof window !== 'undefined') {
+          const token = localStorage.getItem('cms_auth_token');
+          if (token) {
+            headers.set('Authorization', `Bearer ${token}`);
+          }
+        }
+
         const response = await fetch(sessionUrl, {
+          headers,
           credentials: 'include',
           signal: controller.signal,
         });

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, MessageSquare, ShieldCheck, RefreshCw, AlertCircle, Phone, CheckCircle2 } from 'lucide-react';
 import { useAppDispatch } from '@/store/hooks';
 import { loginStart, loginSuccess, loginFailure } from '@/store/slices/authSlice';
+import { authService } from '@/services/authService';
 
 interface SmsOtpFlowProps {
   initialPhone?: string;
@@ -81,15 +82,24 @@ export const SmsOtpFlow: React.FC<SmsOtpFlowProps> = ({
     setPhoneError(null);
     setIsSending(true);
 
-    // Simulate sending OTP SMS with realistic latency
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      const cleanPhone = `${countryCode}${cleanNumber}`;
+      await authService.sendOtp({ phone: cleanPhone });
 
-    setIsSending(false);
-    setResendCooldown(45);
-    setExpiryCountdown(180);
-    setOtp(['', '', '', '', '', '']);
-    setOtpError(null);
-    setStep('enter-otp');
+      setResendCooldown(45);
+      setExpiryCountdown(180);
+      setOtp(['', '', '', '', '', '']);
+      setOtpError(null);
+      setStep('enter-otp');
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Failed to send verification code. Please check your number and try again.';
+      setPhoneError(message);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleResendCode = async () => {
@@ -97,12 +107,24 @@ export const SmsOtpFlow: React.FC<SmsOtpFlowProps> = ({
     setIsSending(true);
     setOtpError(null);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setIsSending(false);
-    setResendCooldown(45);
-    setExpiryCountdown(180);
-    setOtp(['', '', '', '', '', '']);
-    inputRefs.current[0]?.focus();
+    try {
+      const cleanNumber = phoneNumber.replace(/\s+/g, '');
+      const cleanPhone = `${countryCode}${cleanNumber}`;
+      await authService.sendOtp({ phone: cleanPhone });
+
+      setResendCooldown(45);
+      setExpiryCountdown(180);
+      setOtp(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Failed to resend code. Please try again.';
+      setOtpError(message);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -184,34 +206,31 @@ export const SmsOtpFlow: React.FC<SmsOtpFlowProps> = ({
     setOtpError(null);
     dispatch(loginStart());
 
-    // Simulated verification delay
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    try {
+      const cleanPhone = `${countryCode}${phoneNumber.replace(/\s+/g, '')}`;
+      const response = await authService.verifyOtp({
+        phone: cleanPhone,
+        code: codeToVerify,
+      });
 
-    // For testing: '000000' can simulate an invalid OTP, while '123456' or any other 6 digits succeeds
-    if (codeToVerify === '000000') {
+      dispatch(
+        loginSuccess({
+          user: response.user,
+          token: response.token || '',
+        })
+      );
+
+      router.push(redirectPath);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Invalid or expired verification code. Please try again.';
+      setOtpError(message);
+      dispatch(loginFailure(message));
+    } finally {
       setIsVerifying(false);
-      setOtpError('Invalid verification code. Please check your SMS or try again.');
-      dispatch(loginFailure('Invalid OTP code.'));
-      return;
     }
-
-    // Authenticate site worker successfully
-    const cleanPhone = `${countryCode}${phoneNumber.replace(/\s+/g, '')}`;
-    dispatch(
-      loginSuccess({
-        user: {
-          id: 'cms_worker_' + Math.random().toString(36).substring(2, 8),
-          email: `${cleanPhone.replace('+', '')}@worker.futura.lk`,
-          fullName: 'Site Worker (' + cleanPhone + ')',
-          role: 'SITE_SUPERVISOR',
-          phone: cleanPhone,
-        },
-        token: 'cms_otp_auth_token_' + Date.now(),
-      })
-    );
-
-    setIsVerifying(false);
-    router.push(redirectPath);
   };
 
   const formatTime = (seconds: number) => {
