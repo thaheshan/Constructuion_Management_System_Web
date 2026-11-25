@@ -42,7 +42,7 @@ test('getBaseApiUrl returns default URL or sanitizes NEXT_PUBLIC_API_URL', () =>
   const originalEnv = process.env.NEXT_PUBLIC_API_URL;
   try {
     delete process.env.NEXT_PUBLIC_API_URL;
-    assert.equal(getBaseApiUrl(), 'http://localhost:8080/api/v1');
+    assert.equal(getBaseApiUrl(), 'http://localhost:5000/api/v1');
 
     process.env.NEXT_PUBLIC_API_URL = 'https://api.cms.lk/api/v1/';
     assert.equal(getBaseApiUrl(), 'https://api.cms.lk/api/v1');

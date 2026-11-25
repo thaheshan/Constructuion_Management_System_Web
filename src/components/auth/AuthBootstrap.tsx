@@ -77,8 +77,8 @@ export function AuthBootstrap({ children }: AuthBootstrapProps) {
             dispatch(sessionCheckComplete());
             return;
           }
-        } else if (response.status === 401 || response.status === 403) {
-          // Standard unauthenticated state
+        } else if (response.status === 401 || response.status === 403 || response.status === 404) {
+          // Standard unauthenticated state (or session check endpoint not yet implemented)
           dispatch(sessionCheckComplete());
           return;
         } else {
