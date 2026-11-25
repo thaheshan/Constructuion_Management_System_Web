@@ -50,6 +50,8 @@ export interface CompanyDetails {
   city: string;
   district: SriLankanDistrict | '';
   // Tax and Statutory
+  tinNumber?: string;
+  vatNumber?: string;
   vatTinNumber?: string;
   epfEmployerNo?: string;
   etfEmployerNo?: string;
@@ -81,6 +83,7 @@ export interface OwnerOnboardingState {
   companyDetails: CompanyDetails;
   verification: VerificationState;
   shopId: string;
+  isCompanyCreated: boolean;
   isDraftSaved: boolean;
   lastSavedAt: string | null;
 }

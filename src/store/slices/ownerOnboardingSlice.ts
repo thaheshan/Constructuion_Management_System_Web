@@ -27,6 +27,8 @@ const initialCompanyDetails: CompanyDetails = {
   addressLine: '',
   city: '',
   district: 'Colombo',
+  tinNumber: '',
+  vatNumber: '',
   vatTinNumber: '',
   epfEmployerNo: '',
   etfEmployerNo: '',
@@ -53,6 +55,7 @@ const initialState: OwnerOnboardingState = {
     error: null,
   },
   shopId: 'FUT-7K4M-9Q2X',
+  isCompanyCreated: false,
   isDraftSaved: false,
   lastSavedAt: null,
 };
@@ -74,6 +77,23 @@ export const ownerOnboardingSlice = createSlice({
       state,
       action: PayloadAction<Partial<OwnerDetails>>
     ) => {
+      const phoneChanged =
+        action.payload.phone !== undefined &&
+        action.payload.phone !== state.ownerDetails.phone;
+      const emailChanged =
+        action.payload.email !== undefined &&
+        action.payload.email !== state.ownerDetails.email;
+
+      // Security: Reset verification if phone or email changes so new contact cannot bypass OTP
+      if (phoneChanged || emailChanged) {
+        state.verification.isVerified = false;
+        state.verification.code = ['', '', '', '', '', ''];
+        state.verification.error = null;
+        if (state.furthestStepCompleted >= 3) {
+          state.furthestStepCompleted = 2;
+        }
+      }
+
       state.ownerDetails = { ...state.ownerDetails, ...action.payload };
       state.isDraftSaved = false;
     },
@@ -161,6 +181,23 @@ export const ownerOnboardingSlice = createSlice({
     setShopId: (state, action: PayloadAction<string>) => {
       state.shopId = action.payload;
     },
+    createCompanySuccess: (state) => {
+      if (state.isCompanyCreated) return;
+      state.isCompanyCreated = true;
+      state.furthestStepCompleted = 5;
+      state.currentStep = 5;
+    },
+    restoreCreatedCompany: (
+      state,
+      action: PayloadAction<{ shopId?: string }>
+    ) => {
+      state.isCompanyCreated = true;
+      state.furthestStepCompleted = 5;
+      state.currentStep = 5;
+      if (action.payload.shopId) {
+        state.shopId = action.payload.shopId;
+      }
+    },
     saveDraftSuccess: (state) => {
       state.isDraftSaved = true;
       state.lastSavedAt = new Date().toISOString();
@@ -220,6 +257,8 @@ export const {
   resetCountdown,
   verifyOtp,
   setShopId,
+  createCompanySuccess,
+  restoreCreatedCompany,
   saveDraftSuccess,
   restoreDraft,
   resetOnboarding,

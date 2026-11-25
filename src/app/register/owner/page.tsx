@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setStep,
   restoreDraft,
+  restoreCreatedCompany,
 } from '@/store/slices/ownerOnboardingSlice';
 import { GuestRoute } from '@/components/common/GuestRoute';
 import { OwnerOnboardingHeader } from '@/components/auth/owner-onboarding/OwnerOnboardingHeader';
@@ -13,12 +14,13 @@ import { OnboardingProgressBar } from '@/components/auth/owner-onboarding/Onboar
 import { OwnerStep1YourDetails } from '@/components/auth/owner-onboarding/OwnerStep1YourDetails';
 import { OwnerStep2CompanyDetails } from '@/components/auth/owner-onboarding/OwnerStep2CompanyDetails';
 import { OwnerStep3VerifyOtp } from '@/components/auth/owner-onboarding/OwnerStep3VerifyOtp';
-import { OwnerStep4Review } from '@/components/auth/owner-onboarding/OwnerStep4Review';
+import { OwnerStep4ReviewConfirm } from '@/components/auth/owner-onboarding/OwnerStep4ReviewConfirm';
 import { OwnerStep5CompanyReady } from '@/components/auth/owner-onboarding/OwnerStep5CompanyReady';
 import { TOTAL_STEPS } from '@/config/onboardingSteps';
 import {
   loadValidDraft,
   clearOnboardingDraft,
+  loadCreatedCompanyState,
   OwnerOnboardingDraft,
 } from '@/utils/draftStorage';
 import { RefreshCw, X } from 'lucide-react';
@@ -28,7 +30,10 @@ import { Button } from '@/components/ui/Button';
  * Clamps requested steps against the furthest reachable completed step.
  * Non-numeric, zero or negative values fall back to step 1.
  */
-function clampStep(rawStep: string | number | null | undefined, maxAllowed: number): number {
+function clampStep(
+  rawStep: string | number | null | undefined,
+  maxAllowed: number
+): number {
   if (rawStep === null || rawStep === undefined) return 1;
   const parsed = typeof rawStep === 'number' ? rawStep : parseInt(String(rawStep), 10);
   if (isNaN(parsed) || parsed < 1) return 1;
@@ -38,7 +43,7 @@ function clampStep(rawStep: string | number | null | undefined, maxAllowed: numb
 function OwnerOnboardingWizardContent() {
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
-  const { currentStep, furthestStepCompleted } = useAppSelector(
+  const { currentStep, furthestStepCompleted, isCompanyCreated } = useAppSelector(
     (state) => state.ownerOnboarding
   );
 
@@ -47,13 +52,31 @@ function OwnerOnboardingWizardContent() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   // Maximum step index the user is allowed to navigate to based on actual completions
-  const maxAllowedStep = Math.min(TOTAL_STEPS, Math.max(1, furthestStepCompleted + 1));
+  const maxAllowedStep = isCompanyCreated
+    ? 5
+    : Math.min(TOTAL_STEPS, Math.max(1, furthestStepCompleted + 1));
 
-  // Initialize step from URL on initial mount once
+  // Guard flag to prevent URL-sync effect from overwriting initial URL before mount dispatch applies
+  const isInitialized = useRef(false);
+
+  // Lock wizard: if company is already created, lock navigation strictly to Step 5
+  useEffect(() => {
+    if (isCompanyCreated && currentStep !== 5) {
+      dispatch(setStep(5));
+    }
+  }, [isCompanyCreated, currentStep, dispatch]);
+
+  // Hydrate persisted company creation state or initialize step from URL on initial mount once
   const isInitialMount = useRef(true);
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      const created = loadCreatedCompanyState();
+      if (created) {
+        dispatch(restoreCreatedCompany({ shopId: created.shopId }));
+        return;
+      }
+
       const rawParam = searchParams.get('step');
       const clampedTarget = clampStep(rawParam, maxAllowedStep);
       if (clampedTarget > 1) {
@@ -67,24 +90,35 @@ function OwnerOnboardingWizardContent() {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const rawParam = params.get('step');
-      const targetStep = clampStep(rawParam, maxAllowedStep);
+      const targetStep = isCompanyCreated ? 5 : clampStep(rawParam, maxAllowedStep);
       dispatch(setStep(targetStep));
-
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        if (url.searchParams.get('step') !== String(targetStep)) {
-          url.searchParams.set('step', String(targetStep));
-          window.history.replaceState(null, '', url.toString());
-        }
-      }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [dispatch, maxAllowedStep]);
+  }, [dispatch, maxAllowedStep, isCompanyCreated]);
+
+  // Keep browser URL in sync with Redux currentStep
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      const created = loadCreatedCompanyState();
+      const expectedStep = created
+        ? 5
+        : clampStep(url.searchParams.get('step'), maxAllowedStep);
+      if (expectedStep !== currentStep) return;
+    }
+    if (url.searchParams.get('step') !== String(currentStep)) {
+      url.searchParams.set('step', String(currentStep));
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, [currentStep, maxAllowedStep]);
 
   // Check for saved draft on initial mount
   useEffect(() => {
+    if (loadCreatedCompanyState()) return;
     const draft = loadValidDraft();
     if (draft) {
       setSavedDraftData(draft);
@@ -126,7 +160,7 @@ function OwnerOnboardingWizardContent() {
       {/* Main Container */}
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 pt-6 pb-16">
         {/* Unfinished Draft Resume Banner */}
-        {draftBannerVisible && savedDraftData && (
+        {draftBannerVisible && savedDraftData && !isCompanyCreated && (
           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4 animate-fadeIn shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
@@ -177,7 +211,7 @@ function OwnerOnboardingWizardContent() {
           <OwnerStep3VerifyOtp onOpenHelp={() => setIsHelpOpen(true)} />
         )}
         {currentStep === 4 && (
-          <OwnerStep4Review onOpenHelp={() => setIsHelpOpen(true)} />
+          <OwnerStep4ReviewConfirm onOpenHelp={() => setIsHelpOpen(true)} />
         )}
         {currentStep === 5 && (
           <OwnerStep5CompanyReady onOpenHelp={() => setIsHelpOpen(true)} />
