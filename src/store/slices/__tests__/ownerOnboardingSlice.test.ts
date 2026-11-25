@@ -6,6 +6,7 @@ import {
   completeStep,
   setShopId,
   createCompanySuccess,
+  restoreCreatedCompany,
   restoreDraft,
   resetOnboarding,
   updateOwnerDetails,
@@ -97,6 +98,25 @@ test('ownerOnboardingSlice: createCompanySuccess locks wizard and advances to St
   assert.equal(state.isCompanyCreated, true);
   assert.equal(state.furthestStepCompleted, 5);
   assert.equal(state.currentStep, 5);
+});
+
+test('ownerOnboardingSlice: createCompanySuccess is idempotent and restoreCreatedCompany hydrates refresh state', () => {
+  let state = ownerOnboardingSlice.reducer(undefined, setShopId('FUT-ABCD-1234'));
+  state = ownerOnboardingSlice.reducer(state, createCompanySuccess());
+  state = ownerOnboardingSlice.reducer(state, createCompanySuccess());
+
+  assert.equal(state.isCompanyCreated, true);
+  assert.equal(state.shopId, 'FUT-ABCD-1234');
+  assert.equal(state.currentStep, 5);
+
+  const hydrated = ownerOnboardingSlice.reducer(
+    undefined,
+    restoreCreatedCompany({ shopId: 'FUT-WXYZ-9999' })
+  );
+  assert.equal(hydrated.isCompanyCreated, true);
+  assert.equal(hydrated.shopId, 'FUT-WXYZ-9999');
+  assert.equal(hydrated.furthestStepCompleted, 5);
+  assert.equal(hydrated.currentStep, 5);
 });
 
 test('ownerOnboardingSlice: restoreDraft strips password and confirmPassword', () => {

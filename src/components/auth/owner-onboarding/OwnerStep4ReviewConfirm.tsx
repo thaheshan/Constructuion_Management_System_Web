@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   User,
   Briefcase,
@@ -17,7 +17,11 @@ import {
   createCompanySuccess,
 } from "@/store/slices/ownerOnboardingSlice";
 import { useStepNavigation } from "@/hooks/useStepNavigation";
-import { clearOnboardingDraft } from "@/utils/draftStorage";
+import {
+  clearOnboardingDraft,
+  saveCreatedCompanyState,
+} from "@/utils/draftStorage";
+import { OWNER_STARTING_DEFAULTS } from "@/constants/onboardingDefaults";
 
 interface OwnerStep4ReviewConfirmProps {
   onOpenHelp?: () => void;
@@ -32,6 +36,7 @@ export const OwnerStep4ReviewConfirm: React.FC<
     useAppSelector((state) => state.ownerOnboarding);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   // Lock wizard: if company is already created, automatically redirect to Step 5
   useEffect(() => {
@@ -97,25 +102,31 @@ export const OwnerStep4ReviewConfirm: React.FC<
   };
 
   const handleCreateCompany = async () => {
-    if (isSubmitting || isCompanyCreated) return;
+    if (isSubmittingRef.current || isSubmitting || isCompanyCreated) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
-      // Simulate company creation / provisioning call
+      // Simulate company creation / provisioning call (demo endpoint placeholder)
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Generate and persist Shop ID if not already defined
+      const resolvedShopId =
+        shopId ||
+        `FUT-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
       if (!shopId) {
-        const generatedShopId = `FUT-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-        dispatch(setShopId(generatedShopId));
+        dispatch(setShopId(resolvedShopId));
       }
 
-      // Purge onboarding draft from localStorage upon successful company creation
+      // Persist creation state across page refreshes & purge draft
+      saveCreatedCompanyState(resolvedShopId);
       clearOnboardingDraft();
 
       // Lock creation and advance to Step 5 (Company Ready)
       dispatch(createCompanySuccess());
       goToStep(5);
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -317,18 +328,15 @@ export const OwnerStep4ReviewConfirm: React.FC<
           </h3>
         </div>
         <ul className="space-y-2.5 pt-1">
-          <li className="flex items-center gap-2.5 text-xs sm:text-[13px] text-slate-700">
-            <Check className="w-4 h-4 text-emerald-600 stroke-[3] flex-shrink-0" />
-            <span>PO approval limits set to auto-approve below LKR 50,000</span>
-          </li>
-          <li className="flex items-center gap-2.5 text-xs sm:text-[13px] text-slate-700">
-            <Check className="w-4 h-4 text-emerald-600 stroke-[3] flex-shrink-0" />
-            <span>Weekly operational digest sent every Monday at 8:00 AM</span>
-          </li>
-          <li className="flex items-center gap-2.5 text-xs sm:text-[13px] text-slate-700">
-            <Check className="w-4 h-4 text-emerald-600 stroke-[3] flex-shrink-0" />
-            <span>Standard inventory valuation (FIFO) enabled</span>
-          </li>
+          {OWNER_STARTING_DEFAULTS.map((defaultItem) => (
+            <li
+              key={defaultItem}
+              className="flex items-center gap-2.5 text-xs sm:text-[13px] text-slate-700"
+            >
+              <Check className="w-4 h-4 text-emerald-600 stroke-[3] flex-shrink-0" />
+              <span>{defaultItem}</span>
+            </li>
+          ))}
         </ul>
       </div>
 

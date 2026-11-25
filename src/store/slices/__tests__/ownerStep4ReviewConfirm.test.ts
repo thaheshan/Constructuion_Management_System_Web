@@ -6,21 +6,31 @@ import {
   completeStep,
   setShopId,
   createCompanySuccess,
-  updateOwnerDetails,
+  restoreCreatedCompany,
   updateCompanyDetails,
 } from '../ownerOnboardingSlice';
+import {
+  OWNER_STARTING_DEFAULTS,
+  DEFAULT_PO_AUTO_APPROVE_LIMIT_LKR,
+  DEFAULT_WEEKLY_DIGEST_SCHEDULE,
+  DEFAULT_INVENTORY_VALUATION,
+} from '../../../constants/onboardingDefaults';
+import {
+  saveCreatedCompanyState,
+  loadCreatedCompanyState,
+  clearCreatedCompanyState,
+  COMPANY_CREATED_STORAGE_KEY,
+} from '../../../utils/draftStorage';
 
-test('FE-09 Review: Starting defaults list requirements are strictly defined', () => {
-  const startingDefaults = [
-    'PO approval limits set to auto-approve below LKR 50,000',
-    'Weekly operational digest sent every Monday at 8:00 AM',
-    'Standard inventory valuation (FIFO) enabled',
-  ];
+test('FE-09 Review: Starting defaults come from constants and match requirements', () => {
+  assert.equal(DEFAULT_PO_AUTO_APPROVE_LIMIT_LKR, 50000);
+  assert.equal(DEFAULT_WEEKLY_DIGEST_SCHEDULE, 'Monday at 8:00 AM');
+  assert.equal(DEFAULT_INVENTORY_VALUATION, 'FIFO');
 
-  assert.equal(startingDefaults.length, 3);
-  assert.match(startingDefaults[0], /auto-approve below LKR 50,000/);
-  assert.match(startingDefaults[1], /Monday at 8:00 AM/);
-  assert.match(startingDefaults[2], /FIFO/);
+  assert.equal(OWNER_STARTING_DEFAULTS.length, 3);
+  assert.match(OWNER_STARTING_DEFAULTS[0], /auto-approve below LKR 50,000/);
+  assert.match(OWNER_STARTING_DEFAULTS[1], /Monday at 8:00 AM/);
+  assert.match(OWNER_STARTING_DEFAULTS[2], /FIFO/);
 });
 
 test('FE-09 Review: Owner Account summary handles fallback when fields are empty', () => {
@@ -101,4 +111,56 @@ test('FE-09 Creation: Create company dispatches createCompanySuccess and locks w
   assert.equal(state.isCompanyCreated, true);
   assert.equal(state.furthestStepCompleted, 5);
   assert.equal(state.currentStep, 5, 'Owner is transitioned to Step 5 (Company Ready)');
+});
+
+test('FE-09 Creation: Double-submission and page refresh do not re-create company or overwrite shopId', () => {
+  let state = ownerOnboardingSlice.reducer(undefined, setShopId('FUT-1111-2222'));
+  state = ownerOnboardingSlice.reducer(state, createCompanySuccess());
+
+  // Second dispatch must be a no-op on isCompanyCreated and shopId
+  state = ownerOnboardingSlice.reducer(state, createCompanySuccess());
+  assert.equal(state.isCompanyCreated, true);
+  assert.equal(state.shopId, 'FUT-1111-2222');
+  assert.equal(state.currentStep, 5);
+
+  // Mock browser localStorage to verify persistence across page refresh
+  const store = new Map<string, string>();
+  const prevWindow = (globalThis as Record<string, unknown>).window;
+  const prevStorage = (globalThis as Record<string, unknown>).localStorage;
+
+  (globalThis as Record<string, unknown>).window = {};
+  (globalThis as Record<string, unknown>).localStorage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+
+  try {
+    saveCreatedCompanyState('FUT-1111-2222');
+    assert.ok(store.has(COMPANY_CREATED_STORAGE_KEY));
+
+    const loaded = loadCreatedCompanyState();
+    assert.ok(loaded);
+    assert.equal(loaded.isCompanyCreated, true);
+    assert.equal(loaded.shopId, 'FUT-1111-2222');
+
+    // Simulating fresh Redux store on page refresh hydrated from persisted state
+    const refreshedState = ownerOnboardingSlice.reducer(
+      undefined,
+      restoreCreatedCompany({ shopId: loaded.shopId })
+    );
+    assert.equal(refreshedState.isCompanyCreated, true);
+    assert.equal(refreshedState.shopId, 'FUT-1111-2222');
+    assert.equal(refreshedState.currentStep, 5);
+
+    clearCreatedCompanyState();
+    assert.equal(loadCreatedCompanyState(), null);
+  } finally {
+    (globalThis as Record<string, unknown>).window = prevWindow;
+    (globalThis as Record<string, unknown>).localStorage = prevStorage;
+  }
 });

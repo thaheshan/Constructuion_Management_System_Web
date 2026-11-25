@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setStep,
   restoreDraft,
+  restoreCreatedCompany,
 } from '@/store/slices/ownerOnboardingSlice';
 import { GuestRoute } from '@/components/common/GuestRoute';
 import { OwnerOnboardingHeader } from '@/components/auth/owner-onboarding/OwnerOnboardingHeader';
@@ -19,6 +20,7 @@ import { TOTAL_STEPS } from '@/config/onboardingSteps';
 import {
   loadValidDraft,
   clearOnboardingDraft,
+  loadCreatedCompanyState,
   OwnerOnboardingDraft,
 } from '@/utils/draftStorage';
 import { RefreshCw, X } from 'lucide-react';
@@ -26,15 +28,12 @@ import { Button } from '@/components/ui/Button';
 
 /**
  * Clamps requested steps against the furthest reachable completed step.
- * Once company is created, wizard locks strictly to Step 5.
  * Non-numeric, zero or negative values fall back to step 1.
  */
 function clampStep(
   rawStep: string | number | null | undefined,
-  maxAllowed: number,
-  isCompanyCreated = false
+  maxAllowed: number
 ): number {
-  if (isCompanyCreated) return 5;
   if (rawStep === null || rawStep === undefined) return 1;
   const parsed = typeof rawStep === 'number' ? rawStep : parseInt(String(rawStep), 10);
   if (isNaN(parsed) || parsed < 1) return 1;
@@ -57,54 +56,69 @@ function OwnerOnboardingWizardContent() {
     ? 5
     : Math.min(TOTAL_STEPS, Math.max(1, furthestStepCompleted + 1));
 
+  // Guard flag to prevent URL-sync effect from overwriting initial URL before mount dispatch applies
+  const isInitialized = useRef(false);
+
   // Lock wizard: if company is already created, lock navigation strictly to Step 5
   useEffect(() => {
     if (isCompanyCreated && currentStep !== 5) {
       dispatch(setStep(5));
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        url.searchParams.set('step', '5');
-        window.history.replaceState(null, '', url.toString());
-      }
     }
   }, [isCompanyCreated, currentStep, dispatch]);
 
-  // Initialize step from URL on initial mount once
+  // Hydrate persisted company creation state or initialize step from URL on initial mount once
   const isInitialMount = useRef(true);
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      const created = loadCreatedCompanyState();
+      if (created) {
+        dispatch(restoreCreatedCompany({ shopId: created.shopId }));
+        return;
+      }
+
       const rawParam = searchParams.get('step');
-      const clampedTarget = clampStep(rawParam, maxAllowedStep, isCompanyCreated);
+      const clampedTarget = clampStep(rawParam, maxAllowedStep);
       if (clampedTarget > 1) {
         dispatch(setStep(clampedTarget));
       }
     }
-  }, [searchParams, dispatch, maxAllowedStep, isCompanyCreated]);
+  }, [searchParams, dispatch, maxAllowedStep]);
 
   // Handle browser back and forward button events smoothly
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const rawParam = params.get('step');
-      const targetStep = clampStep(rawParam, maxAllowedStep, isCompanyCreated);
+      const targetStep = isCompanyCreated ? 5 : clampStep(rawParam, maxAllowedStep);
       dispatch(setStep(targetStep));
-
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        if (url.searchParams.get('step') !== String(targetStep)) {
-          url.searchParams.set('step', String(targetStep));
-          window.history.replaceState(null, '', url.toString());
-        }
-      }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [dispatch, maxAllowedStep, isCompanyCreated]);
 
+  // Keep browser URL in sync with Redux currentStep
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      const created = loadCreatedCompanyState();
+      const expectedStep = created
+        ? 5
+        : clampStep(url.searchParams.get('step'), maxAllowedStep);
+      if (expectedStep !== currentStep) return;
+    }
+    if (url.searchParams.get('step') !== String(currentStep)) {
+      url.searchParams.set('step', String(currentStep));
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, [currentStep, maxAllowedStep]);
+
   // Check for saved draft on initial mount
   useEffect(() => {
+    if (loadCreatedCompanyState()) return;
     const draft = loadValidDraft();
     if (draft) {
       setSavedDraftData(draft);

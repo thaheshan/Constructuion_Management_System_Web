@@ -182,9 +182,21 @@ export const ownerOnboardingSlice = createSlice({
       state.shopId = action.payload;
     },
     createCompanySuccess: (state) => {
+      if (state.isCompanyCreated) return;
       state.isCompanyCreated = true;
       state.furthestStepCompleted = 5;
       state.currentStep = 5;
+    },
+    restoreCreatedCompany: (
+      state,
+      action: PayloadAction<{ shopId?: string }>
+    ) => {
+      state.isCompanyCreated = true;
+      state.furthestStepCompleted = 5;
+      state.currentStep = 5;
+      if (action.payload.shopId) {
+        state.shopId = action.payload.shopId;
+      }
     },
     saveDraftSuccess: (state) => {
       state.isDraftSaved = true;
@@ -246,6 +258,7 @@ export const {
   verifyOtp,
   setShopId,
   createCompanySuccess,
+  restoreCreatedCompany,
   saveDraftSuccess,
   restoreDraft,
   resetOnboarding,

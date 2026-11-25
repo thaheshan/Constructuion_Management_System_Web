@@ -1,7 +1,14 @@
 import { CompanyDetails } from '../types/onboarding';
 
 export const DRAFT_STORAGE_KEY = 'futura_owner_onboarding_draft';
+export const COMPANY_CREATED_STORAGE_KEY = 'futura_owner_company_created';
 export const DRAFT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+export interface CreatedCompanyRecord {
+  isCompanyCreated: true;
+  shopId: string;
+  createdAt: number;
+}
 
 export interface OwnerDraftOwnerDetails {
   fullName: string;
@@ -137,6 +144,64 @@ export function clearOnboardingDraft(): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // Ignore storage cleanup failures
+  }
+}
+
+/**
+ * Persists completed company creation state so a page refresh cannot re-create
+ * the company or generate a new Shop ID.
+ */
+export function saveCreatedCompanyState(shopId: string): void {
+  if (typeof window === 'undefined' || !shopId) return;
+  const record: CreatedCompanyRecord = {
+    isCompanyCreated: true,
+    shopId,
+    createdAt: Date.now(),
+  };
+  try {
+    localStorage.setItem(COMPANY_CREATED_STORAGE_KEY, JSON.stringify(record));
+  } catch (err) {
+    console.error('Failed to persist created company state', err);
+  }
+}
+
+/**
+ * Loads persisted company creation state if present and valid.
+ */
+export function loadCreatedCompanyState(): CreatedCompanyRecord | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(COMPANY_CREATED_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<CreatedCompanyRecord>;
+    if (
+      parsed &&
+      parsed.isCompanyCreated === true &&
+      typeof parsed.shopId === 'string' &&
+      parsed.shopId.trim().length > 0
+    ) {
+      return {
+        isCompanyCreated: true,
+        shopId: parsed.shopId,
+        createdAt: typeof parsed.createdAt === 'number' ? parsed.createdAt : Date.now(),
+      };
+    }
+    localStorage.removeItem(COMPANY_CREATED_STORAGE_KEY);
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clears persisted company creation state.
+ */
+export function clearCreatedCompanyState(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(COMPANY_CREATED_STORAGE_KEY);
   } catch {
     // Ignore storage cleanup failures
   }
