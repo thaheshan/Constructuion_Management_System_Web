@@ -5,15 +5,22 @@ import { useRouter } from 'next/navigation';
 import { LogOut, User as UserIcon, Shield } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { logout } from '@/store/slices/authSlice';
+import { authService } from '@/services/authService';
 
 export const Header: React.FC = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    router.replace('/login');
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // Best-effort logout: ignore network failures
+    } finally {
+      dispatch(logout());
+      router.replace('/login');
+    }
   };
 
   return (

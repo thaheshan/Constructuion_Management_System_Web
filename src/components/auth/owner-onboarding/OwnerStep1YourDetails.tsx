@@ -15,8 +15,9 @@ import {
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { User, Eye, EyeOff, ArrowRight, HelpCircle } from 'lucide-react';
+import { User, Eye, EyeOff, ArrowRight, HelpCircle, Loader2, AlertCircle } from 'lucide-react';
 import { OwnerDetails } from '@/types/onboarding';
+import { onboardingService } from '@/services/onboardingService';
 
 interface OwnerStep1YourDetailsProps {
   onOpenHelp?: () => void;
@@ -33,6 +34,8 @@ export const OwnerStep1YourDetails: React.FC<OwnerStep1YourDetailsProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const handleBlur = (field: keyof OwnerDetails) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -48,8 +51,9 @@ export const OwnerStep1YourDetails: React.FC<OwnerStep1YourDetailsProps> = ({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError(null);
     const validationErrors = validateOwnerStep1(ownerDetails);
     setErrors(validationErrors);
     setTouched({
@@ -62,8 +66,20 @@ export const OwnerStep1YourDetails: React.FC<OwnerStep1YourDetailsProps> = ({
     });
 
     if (Object.keys(validationErrors).length === 0) {
-      dispatch(completeStep(1));
-      goToStep(2);
+      setIsSubmitting(true);
+      try {
+        await onboardingService.saveOwnerDetails(ownerDetails);
+        dispatch(completeStep(1));
+        goToStep(2);
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Registration request could not be processed. Please check your details.';
+        setApiError(message);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -87,6 +103,14 @@ export const OwnerStep1YourDetails: React.FC<OwnerStep1YourDetailsProps> = ({
 
         {/* ── Form Inputs ── */}
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {/* Server Error Alert Banner */}
+          {apiError && (
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm flex items-start gap-2.5 animate-fadeIn">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <span>{apiError}</span>
+            </div>
+          )}
+
           {/* Full Name */}
           <Input
             label="Full Name (As on NIC) *"
@@ -136,6 +160,16 @@ export const OwnerStep1YourDetails: React.FC<OwnerStep1YourDetailsProps> = ({
               </p>
             )}
           </div>
+
+          {/* National Identity Card (NIC) */}
+          <Input
+            label="National Identity Card (NIC) (Optional)"
+            placeholder="e.g. 199012345678 or 901234567V"
+            value={ownerDetails.nic || ''}
+            onChange={(e) => dispatch(updateOwnerDetails({ nic: e.target.value.toUpperCase() }))}
+            onBlur={() => handleBlur('nic')}
+            error={touched.nic ? errors.nic : undefined}
+          />
 
           {/* Password */}
           <div>
@@ -229,10 +263,20 @@ export const OwnerStep1YourDetails: React.FC<OwnerStep1YourDetailsProps> = ({
               type="submit"
               variant="primary"
               size="lg"
+              disabled={isSubmitting}
               className="w-full bg-futura-500 hover:bg-futura-600 active:bg-futura-700 text-white font-bold py-3.5 shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Continue to Company Details</span>
-              <ArrowRight className="w-4 h-4" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving details...</span>
+                </>
+              ) : (
+                <>
+                  <span>Continue to Company Details</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </Button>
           </div>
         </form>

@@ -15,6 +15,7 @@ import { useStepNavigation } from '@/hooks/useStepNavigation';
 import { isValidEmail, isValidSriLankaMobile } from '@/utils/validators';
 import { OtpInputGrid } from './OtpInputGrid';
 import { Button } from '@/components/ui/Button';
+import { authService } from '@/services/authService';
 import {
   Shield,
   Mail,
@@ -25,6 +26,7 @@ import {
   X,
   ArrowLeft,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
 
 interface OwnerStep3VerifyOtpProps {
@@ -57,6 +59,9 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
 
   // Success message after resend
   const [resendNotification, setResendNotification] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   // Timer countdown hook
   useEffect(() => {
@@ -96,30 +101,51 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
   const isCodeComplete = fullCode.length === 6;
   const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
 
-  const handleVerify = (e?: React.FormEvent) => {
+  const handleVerify = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!isCodeComplete || isLocked) return;
+    if (!isCodeComplete || isLocked || isVerifying) return;
+    setVerifyError(null);
+    setIsVerifying(true);
 
-    // Check if 6-digit numeric
-    const isCodeNumeric = /^[0-9]{6}$/.test(fullCode);
-    dispatch(verifyOtp(fullCode));
+    try {
+      const cleanPhone = `+94${(ownerDetails.phone || '771234567').replace(/^(\+94|0)/, '').replace(/\s+/g, '')}`;
+      await authService.verifyOtp({
+        phone: cleanPhone,
+        code: fullCode,
+      });
 
-    if (isCodeNumeric) {
       dispatch(completeStep(3));
-      // Direct navigation on successful verification without racing in useEffect
       goToStep(4);
+    } catch (err: unknown) {
+      dispatch(verifyOtp(fullCode));
+      const message = err instanceof Error ? err.message : 'Invalid verification code.';
+      setVerifyError(message);
+    } finally {
+      setIsVerifying(false);
     }
   };
 
-  const handleResend = () => {
-    if (resendCountdown > 0 || isLocked) return;
+  const handleResend = async () => {
+    if (resendCountdown > 0 || isLocked || isResending) return;
+    setIsResending(true);
+    setVerifyError(null);
 
-    dispatch(resetCountdown(59));
-    dispatch(setVerificationCode(['', '', '', '', '', '']));
-    setResendNotification(
-      `A fresh 6-digit verification code has been dispatched via ${channel}.`
-    );
-    setTimeout(() => setResendNotification(null), 5000);
+    try {
+      const cleanPhone = `+94${(ownerDetails.phone || '771234567').replace(/^(\+94|0)/, '').replace(/\s+/g, '')}`;
+      await authService.sendOtp({ phone: cleanPhone });
+
+      dispatch(resetCountdown(59));
+      dispatch(setVerificationCode(['', '', '', '', '', '']));
+      setResendNotification(
+        `A fresh 6-digit verification code has been dispatched via ${channel}.`
+      );
+      setTimeout(() => setResendNotification(null), 5000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to send OTP code.';
+      setVerifyError(message);
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const handleSwitchChannel = () => {
@@ -281,16 +307,31 @@ export const OwnerStep3VerifyOtp: React.FC<OwnerStep3VerifyOtpProps> = ({
 
         {/* ── Submit / Verify Button ── */}
         <div className="pt-8 space-y-3">
+          {verifyError && (
+            <p className="text-xs text-red-600 font-semibold text-center animate-fadeIn">
+              {verifyError}
+            </p>
+          )}
+
           <Button
             type="button"
             variant="primary"
             size="lg"
             onClick={() => handleVerify()}
-            disabled={!isCodeComplete || isLocked}
+            disabled={!isCodeComplete || isLocked || isVerifying}
             className="w-full bg-futura-500 hover:bg-futura-600 active:bg-futura-700 disabled:opacity-50 text-white font-bold py-3.5 shadow-md flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Verify and Continue</span>
-            <ArrowRight className="w-4 h-4" />
+            {isVerifying ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Verifying code...</span>
+              </>
+            ) : (
+              <>
+                <span>Verify and Continue</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </Button>
 
           <Button

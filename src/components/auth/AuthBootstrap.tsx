@@ -32,17 +32,35 @@ export function AuthBootstrap({ children }: AuthBootstrapProps) {
 
     const controller = new AbortController();
     activeControllerRef.current = controller;
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 10000); // 10-second timeout to prevent indefinite hanging
+
     const sessionUrl =
-      process.env.NEXT_PUBLIC_AUTH_SESSION_URL || '/api/v1/auth/session';
+      process.env.NEXT_PUBLIC_AUTH_SESSION_URL ||
+      (process.env.NEXT_PUBLIC_API_URL
+        ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')}/auth/session`
+        : '/api/v1/auth/session');
 
     const checkSession = async () => {
       dispatch(sessionCheckStart());
 
       try {
+        const headers = new Headers();
+        if (typeof window !== 'undefined') {
+          const token = localStorage.getItem('cms_auth_token');
+          if (token) {
+            headers.set('Authorization', `Bearer ${token}`);
+          }
+        }
+
         const response = await fetch(sessionUrl, {
+          headers,
           credentials: 'include',
           signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           const data = await response.json();
@@ -65,8 +83,8 @@ export function AuthBootstrap({ children }: AuthBootstrapProps) {
             dispatch(sessionCheckComplete());
             return;
           }
-        } else if (response.status === 401 || response.status === 403) {
-          // Standard unauthenticated state
+        } else if (response.status === 401 || response.status === 403 || response.status === 404) {
+          // Standard unauthenticated state (or session check endpoint not yet implemented)
           dispatch(sessionCheckComplete());
           return;
         } else {
@@ -98,6 +116,7 @@ export function AuthBootstrap({ children }: AuthBootstrapProps) {
     void checkSession();
 
     return () => {
+      clearTimeout(timeoutId);
       controller.abort();
     };
   }, [dispatch, isSessionInitialized]);

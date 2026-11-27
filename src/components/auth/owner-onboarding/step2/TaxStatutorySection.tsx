@@ -68,17 +68,33 @@ export const TaxStatutorySection: React.FC<TaxStatutorySectionProps> = ({
             </label>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Input
-              label="TIN / VAT Number"
+              label="Tax Identification (TIN)"
               placeholder="e.g. 123456789-8000"
-              value={companyDetails.vatTinNumber || ''}
+              value={companyDetails.tinNumber ?? companyDetails.vatTinNumber ?? ''}
               onChange={(e) =>
-                dispatch(updateCompanyDetails({ vatTinNumber: e.target.value }))
+                dispatch(
+                  updateCompanyDetails({
+                    tinNumber: e.target.value,
+                    vatTinNumber: e.target.value,
+                  })
+                )
               }
               onBlur={() => onBlur('vatTinNumber')}
               error={touched.vatTinNumber ? errors.vatTinNumber : undefined}
             />
+
+            {companyDetails.isVatRegistered && (
+              <Input
+                label="VAT Registration No."
+                placeholder="e.g. VAT-11223344"
+                value={companyDetails.vatNumber || ''}
+                onChange={(e) =>
+                  dispatch(updateCompanyDetails({ vatNumber: e.target.value }))
+                }
+              />
+            )}
 
             <Input
               label="EPF Employer No."

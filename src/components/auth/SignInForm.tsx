@@ -20,7 +20,7 @@ import {
   loginFailure,
   clearError,
 } from "@/store/slices/authSlice";
-import { UserRole } from "@/types/auth";
+import { authService } from "@/services/authService";
 
 interface SignInFormProps {
   redirectPath?: string;
@@ -54,8 +54,9 @@ export const SignInForm: React.FC<SignInFormProps> = ({
     password?: string;
   }>({});
 
-  // Restore remembered email on mount if available
+  // Restore remembered email on mount if available & clear any stale error from previous views
   useEffect(() => {
+    dispatch(clearError());
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("cms_remembered_identifier");
       if (saved) {
@@ -63,7 +64,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
         setRememberMe(true);
       }
     }
-  }, []);
+  }, [dispatch]);
 
   const validate = () => {
     const errs: { identifier?: string; password?: string } = {};
@@ -84,8 +85,8 @@ export const SignInForm: React.FC<SignInFormProps> = ({
 
     if (!password) {
       errs.password = "Password is required";
-    } else if (password.length < 6) {
-      errs.password = "Password must be at least 6 characters";
+    } else if (password.length < 8) {
+      errs.password = "Password must be at least 8 characters";
     }
 
     setErrors(errs);
@@ -102,24 +103,10 @@ export const SignInForm: React.FC<SignInFormProps> = ({
     const targetRedirect = searchParams.get("redirect") || defaultRedirect;
 
     try {
-      // Realistic simulated network latency
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      const cleanId = identifier.trim().toLowerCase();
-
-      // Explicit fail trigger for testing invalid credentials scenario
-      if (
-        cleanId.startsWith("fail") ||
-        password === "wrongpassword" ||
-        password === "fail"
-      ) {
-        dispatch(
-          loginFailure(
-            "Invalid credentials. Please check your email or mobile and password.",
-          ),
-        );
-        return;
-      }
+      const response = await authService.login({
+        identifier: identifier.trim(),
+        password,
+      });
 
       // Handle "Remember me"
       if (typeof window !== "undefined") {
@@ -130,66 +117,20 @@ export const SignInForm: React.FC<SignInFormProps> = ({
         }
       }
 
-      // Determine role based on credential conventions
-      let assignedRole: UserRole = "STAFF";
-      let fullName = "Site Team Member";
-
-      if (cleanId.includes("@")) {
-        const username = cleanId.split("@")[0];
-        if (username === "owner" || username.startsWith("owner.")) {
-          assignedRole = "OWNER";
-          fullName = "Kasun Rajapaksa (Owner)";
-        } else if (username === "pm" || username.startsWith("pm.")) {
-          assignedRole = "PROJECT_MANAGER";
-          fullName = "Nimal Jayawardena (Project Manager)";
-        } else if (
-          username === "supervisor" ||
-          username.startsWith("supervisor.")
-        ) {
-          assignedRole = "SITE_SUPERVISOR";
-          fullName = "Chaminda Silva (Site Supervisor)";
-        } else if (
-          username === "accountant" ||
-          username.startsWith("accountant.")
-        ) {
-          assignedRole = "ACCOUNTANT";
-          fullName = "Priyanka Bandara (Accountant)";
-        } else if (username === "store" || username.startsWith("store.")) {
-          assignedRole = "STORE_KEEPER";
-          fullName = "Dinesh Fernando (Store Keeper)";
-        } else {
-          fullName = username
-            .replace(".", " ")
-            .split(" ")
-            .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-            .join(" ");
-        }
-      } else {
-        // Mobile phone user login
-        assignedRole = "SITE_SUPERVISOR";
-        fullName = `Site Supervisor (${identifier.trim()})`;
-      }
-
       dispatch(
         loginSuccess({
-          user: {
-            id: "cms_usr_" + Math.random().toString(36).substring(2, 9),
-            email: cleanId.includes("@") ? cleanId : `${cleanId}@futura.lk`,
-            fullName,
-            role: assignedRole,
-            phone: !cleanId.includes("@") ? cleanId : undefined,
-          },
-          token: "cms_auth_jwt_" + Date.now(),
+          user: response.user,
+          token: response.token || "",
         }),
       );
 
       router.push(targetRedirect);
-    } catch {
-      dispatch(
-        loginFailure(
-          "An unexpected error occurred during login. Please try again.",
-        ),
-      );
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Invalid credentials or server error. Please try again.";
+      dispatch(loginFailure(message));
     }
   };
 

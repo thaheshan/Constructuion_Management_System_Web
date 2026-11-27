@@ -34,6 +34,7 @@ export interface OwnerDetails {
   email: string;
   phonePrefix: string;
   phone: string;
+  nic?: string;
   password: string;
   confirmPassword?: string;
   agreedToTerms: boolean;
@@ -51,6 +52,8 @@ export interface CompanyDetails {
   district: SriLankanDistrict | '';
   // Tax and Statutory
   vatTinNumber?: string;
+  tinNumber?: string;
+  vatNumber?: string;
   epfEmployerNo?: string;
   etfEmployerNo?: string;
   isVatRegistered: boolean;
