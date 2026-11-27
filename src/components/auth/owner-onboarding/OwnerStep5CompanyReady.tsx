@@ -31,7 +31,10 @@ export const OwnerStep5CompanyReady: React.FC<OwnerStep5CompanyReadyProps> = ({
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
 
-  const displayShopId = shopId || 'FUT-7K4M-9Q2X';
+  const displayShopId =
+    shopId && shopId !== 'FUT-7K4M-9Q2X'
+      ? shopId
+      : `FUT-${(companyDetails.companyName || 'CMS').replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase().padEnd(4, 'X')}-${(ownerDetails.phone || '8888').replace(/[^0-9]/g, '').slice(-4).padStart(4, '0')}`;
 
   const handleCopy = async () => {
     try {

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { rolesService, RoleDto } from '@/services/rolesService';
 import {
   Crown,
   BarChart2,
@@ -124,12 +125,59 @@ const NEXT_STEPS = [
 
 export const RoleSelectionScreen: React.FC = () => {
   const router = useRouter();
+  const [roles, setRoles] = useState<RoleCard[]>(ROLES);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedSubRole, setSelectedSubRole] = useState<string | null>(null);
 
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingRoles(true);
+
+    const iconMap: Record<string, React.ReactNode> = {
+      OWNER: <Crown className="w-6 h-6" />,
+      PROJECT_MANAGER: <BarChart2 className="w-6 h-6" />,
+      SITE_SUPERVISOR: <HardHat className="w-6 h-6" />,
+      ARCHITECT: <Compass className="w-6 h-6" />,
+      LABOURER: <Hammer className="w-6 h-6" />,
+      ACCOUNTANT: <DollarSign className="w-6 h-6" />,
+      STORE_KEEPER: <Package className="w-6 h-6" />,
+      STAFF: <Users className="w-6 h-6" />,
+    };
+
+    rolesService
+      .getRoles()
+      .then((apiRoles: RoleDto[]) => {
+        if (!isMounted || !Array.isArray(apiRoles) || apiRoles.length === 0) return;
+        const merged: RoleCard[] = apiRoles.map((r) => ({
+          id: r.code,
+          icon: iconMap[r.code] || <Users className="w-6 h-6" />,
+          title: r.name,
+          description: r.description,
+          tags: r.tags || [],
+          scope: r.scope,
+          subRoles: r.subRoles?.map((s) => ({
+            id: s,
+            label: s.replace(/_/g, ' '),
+          })),
+        }));
+        setRoles(merged);
+      })
+      .catch(() => {
+        // Graceful fallback to static ROLES if backend is offline
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingRoles(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleRoleSelect = (roleId: string) => {
     setSelectedRole(roleId);
-    const role = ROLES.find((r) => r.id === roleId);
+    const role = roles.find((r) => r.id === roleId);
     // Reset sub-role if switching away from STAFF
     if (role?.subRoles && role.subRoles.length > 0) {
       setSelectedSubRole(role.subRoles[0].id);
@@ -140,7 +188,7 @@ export const RoleSelectionScreen: React.FC = () => {
 
   const canContinue =
     selectedRole !== null &&
-    (ROLES.find((r) => r.id === selectedRole)?.subRoles
+    (roles.find((r) => r.id === selectedRole)?.subRoles
       ? selectedSubRole !== null
       : true);
 
@@ -184,7 +232,7 @@ export const RoleSelectionScreen: React.FC = () => {
 
         {/* ── Role Grid ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ROLES.map((role) => {
+          {roles.map((role) => {
             const isSelected = selectedRole === role.id;
 
             return (

@@ -7,7 +7,7 @@
  * e.g., POST /api/v1/auth/login, setting secure httpOnly session cookies and returning user RBAC roles.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -32,6 +32,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ redirectPath: defaultRedir
   const [rememberMe, setRememberMe] = useState(true);
   const [clientErrors, setClientErrors] = useState<{ email?: string; password?: string }>({});
 
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
+
   const isMockAuthAllowed =
     process.env.NODE_ENV !== 'production' ||
     process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH === 'true';
@@ -46,8 +50,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ redirectPath: defaultRedir
 
     if (!password) {
       errors.password = 'Password is required';
-    } else if (password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
+    } else if (password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
     }
 
     setClientErrors(errors);

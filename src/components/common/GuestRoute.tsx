@@ -27,7 +27,11 @@ export const GuestRoute: React.FC<GuestRouteProps> = ({ children, redirectTo = '
 
   useEffect(() => {
     if (isClient && isSessionInitialized && !isLoading && isAuthenticated) {
-      router.replace(redirectTo);
+      const redirectParam =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('redirect')
+          : null;
+      router.replace(redirectParam || redirectTo);
     }
   }, [isClient, isSessionInitialized, isLoading, isAuthenticated, router, redirectTo]);
 

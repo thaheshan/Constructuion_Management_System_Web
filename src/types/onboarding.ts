@@ -34,6 +34,7 @@ export interface OwnerDetails {
   email: string;
   phonePrefix: string;
   phone: string;
+  nic?: string;
   password: string;
   confirmPassword?: string;
   agreedToTerms: boolean;

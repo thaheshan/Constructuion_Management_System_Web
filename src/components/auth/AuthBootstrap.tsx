@@ -32,6 +32,10 @@ export function AuthBootstrap({ children }: AuthBootstrapProps) {
 
     const controller = new AbortController();
     activeControllerRef.current = controller;
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 10000); // 10-second timeout to prevent indefinite hanging
+
     const sessionUrl =
       process.env.NEXT_PUBLIC_AUTH_SESSION_URL ||
       (process.env.NEXT_PUBLIC_API_URL
@@ -55,6 +59,8 @@ export function AuthBootstrap({ children }: AuthBootstrapProps) {
           credentials: 'include',
           signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           const data = await response.json();
@@ -110,6 +116,7 @@ export function AuthBootstrap({ children }: AuthBootstrapProps) {
     void checkSession();
 
     return () => {
+      clearTimeout(timeoutId);
       controller.abort();
     };
   }, [dispatch, isSessionInitialized]);

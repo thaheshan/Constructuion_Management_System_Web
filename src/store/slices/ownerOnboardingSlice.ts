@@ -12,6 +12,7 @@ const initialOwnerDetails: OwnerDetails = {
   email: '',
   phonePrefix: '+94',
   phone: '',
+  nic: '',
   password: '',
   confirmPassword: '',
   agreedToTerms: false,

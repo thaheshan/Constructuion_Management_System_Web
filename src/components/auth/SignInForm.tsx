@@ -54,8 +54,9 @@ export const SignInForm: React.FC<SignInFormProps> = ({
     password?: string;
   }>({});
 
-  // Restore remembered email on mount if available
+  // Restore remembered email on mount if available & clear any stale error from previous views
   useEffect(() => {
+    dispatch(clearError());
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("cms_remembered_identifier");
       if (saved) {
@@ -63,7 +64,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
         setRememberMe(true);
       }
     }
-  }, []);
+  }, [dispatch]);
 
   const validate = () => {
     const errs: { identifier?: string; password?: string } = {};
@@ -84,8 +85,8 @@ export const SignInForm: React.FC<SignInFormProps> = ({
 
     if (!password) {
       errs.password = "Password is required";
-    } else if (password.length < 6) {
-      errs.password = "Password must be at least 6 characters";
+    } else if (password.length < 8) {
+      errs.password = "Password must be at least 8 characters";
     }
 
     setErrors(errs);

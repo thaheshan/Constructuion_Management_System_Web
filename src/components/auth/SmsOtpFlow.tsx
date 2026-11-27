@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, MessageSquare, ShieldCheck, RefreshCw, AlertCircle, Phone, CheckCircle2 } from 'lucide-react';
 import { useAppDispatch } from '@/store/hooks';
 import { loginStart, loginSuccess, loginFailure } from '@/store/slices/authSlice';
@@ -19,6 +19,7 @@ export const SmsOtpFlow: React.FC<SmsOtpFlowProps> = ({
   redirectPath = '/',
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
 
   // Step: 'enter-phone' | 'enter-otp'
@@ -220,7 +221,8 @@ export const SmsOtpFlow: React.FC<SmsOtpFlowProps> = ({
         })
       );
 
-      router.push(redirectPath);
+      const targetRedirect = searchParams?.get('redirect') || redirectPath;
+      router.push(targetRedirect);
     } catch (err: unknown) {
       const message =
         err instanceof Error

@@ -11,7 +11,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { resetSessionCheck } from '@/store/slices/authSlice';
 import { UserRole } from '@/types/auth';
 import { Loader2, ShieldAlert, AlertTriangle } from 'lucide-react';
 
@@ -30,7 +31,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading, isSessionInitialized, role, user } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+  const { isAuthenticated, isLoading, isSessionInitialized, role, user, error } = useAppSelector((state) => state.auth);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -42,6 +44,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   useEffect(() => {
     if (isClient && isSessionInitialized && !isLoading) {
+      if (error) {
+        // Do NOT redirect to login if session check failed due to a server error or outage
+        return;
+      }
       if (!isAuthenticated) {
         const target = pathname && pathname !== '/' ? `?redirect=${encodeURIComponent(pathname)}` : '';
         router.replace(`${fallbackUrl}${target}`);
@@ -49,7 +55,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         router.replace(unauthorizedUrl);
       }
     }
-  }, [isClient, isSessionInitialized, isLoading, isAuthenticated, isRoleAllowed, router, fallbackUrl, unauthorizedUrl, pathname]);
+  }, [isClient, isSessionInitialized, isLoading, isAuthenticated, isRoleAllowed, router, fallbackUrl, unauthorizedUrl, pathname, error]);
 
   // SSR or initial session hydration loading state
   if (!isClient || isLoading || !isSessionInitialized) {
@@ -58,6 +64,32 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="flex flex-col items-center gap-3 p-8 rounded-xl bg-white border border-slate-200 shadow-sm">
           <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
           <p className="text-sm font-medium text-slate-700">Verifying session security...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Server error or network outage: display Connection Notice with a Retry button instead of logging out
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-600 p-4">
+        <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white border border-slate-200 shadow-sm max-w-md text-center">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Connection Notice</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              {error}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => dispatch(resetSessionCheck())}
+            className="px-4 py-2 text-xs font-semibold text-white bg-futura-500 hover:bg-futura-600 rounded-lg transition"
+          >
+            Retry Connection
+          </button>
         </div>
       </div>
     );
