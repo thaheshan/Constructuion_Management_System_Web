@@ -71,7 +71,7 @@ export const onboardingService = {
     const nicValue =
       details.nic && isValidNIC(details.nic)
         ? details.nic.toUpperCase()
-        : '199012345678';
+        : `1990${String(Date.now()).slice(-8)}`;
 
     const payload: SaveOwnerDetailsPayload = {
       fullName: details.fullName.trim(),

@@ -83,7 +83,7 @@ test('onboardingService.saveOwnerDetails canonicalizes phone and posts to /onboa
     assert.ok(capturedUrl.includes('/onboarding/owner/details'));
     assert.equal(capturedBody.phone, '+94771234567');
     assert.equal(capturedBody.email, 'kamal@futura.lk');
-    assert.equal(capturedBody.nic, '199012345678');
+    assert.match(capturedBody.nic, /^\d{12}$/);
     assert.equal(result.success, true);
     assert.equal(result.tokens?.accessToken, 'sample-jwt-token');
   } finally {
